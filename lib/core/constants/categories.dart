@@ -140,12 +140,7 @@ class ExpenseCategories {
       'Locker',
       'Other',
     ],
-    'Prostitution': [
-      'Prostitutes',
-      'Strip Clubs',
-      'Sex Workers',
-      'Other',
-    ],
+    
   };
 
   static List<String> get categoryList => categories.keys.toList();

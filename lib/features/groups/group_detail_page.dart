@@ -7,9 +7,11 @@ import 'dart:developer' as developer;
 
 import '../../core/repositories/groups_repo.dart';
 import '../../core/providers/expense_providers.dart';
+import '../../core/providers/expense_with_splits_provider.dart';
 import '../../core/services/export_service.dart';
 import '../../core/models/group.dart';
 import '../../core/models/expense.dart';
+import '../../core/models/expense_split.dart';
 import '../../core/supabase/supabase_client.dart';
 import '../../core/providers/activity_providers.dart';
 import '../../core/models/group_activity.dart';
@@ -1690,6 +1692,9 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
           const SizedBox(height: 16),
         ],
 
+        // Splits & Balances Section
+        _buildSplitsAndBalancesSection(context, ref, group, expenses),
+
         // Top Expenses
         Card(
           child: Padding(
@@ -1736,6 +1741,258 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSplitsAndBalancesSection(
+    BuildContext context,
+    WidgetRef ref,
+    Group group,
+    List<Expense> expenses,
+  ) {
+    final asyncExpensesWithSplits = ref.watch(groupExpensesWithSplitsProvider(widget.groupId));
+    final asyncMembers = ref.watch(groupMembersProvider(widget.groupId));
+
+    return asyncExpensesWithSplits.when(
+      data: (expensesWithSplits) {
+        return asyncMembers.when(
+          data: (members) {
+            // Build member name map
+            final memberMap = <String, String>{};
+            for (final member in members) {
+              memberMap[member['user_id'] as String] = member['name'] as String;
+            }
+
+            // Calculate balances: positive = owed to them, negative = they owe
+            final balances = <String, double>{};
+            
+            // Initialize all members with 0 balance
+            for (final member in members) {
+              final userId = member['user_id'] as String;
+              balances[userId] = 0.0;
+            }
+
+            // Process each expense with splits
+            for (final expenseWithSplits in expensesWithSplits) {
+              final expense = expenseWithSplits.expense;
+              final splits = expenseWithSplits.splits;
+
+              // Person who paid gets credited (positive balance)
+              if (balances.containsKey(expense.paidBy)) {
+                balances[expense.paidBy] = (balances[expense.paidBy] ?? 0) + expense.amount;
+              }
+
+              // People who owe get debited (negative balance)
+              for (final split in splits) {
+                if (balances.containsKey(split.userId)) {
+                  balances[split.userId] = (balances[split.userId] ?? 0) - split.share;
+                }
+              }
+            }
+
+            // Separate into who owes (negative) and who is owed (positive)
+            final whoOwes = <Map<String, dynamic>>[];
+            final whoIsOwed = <Map<String, dynamic>>[];
+
+            for (final entry in balances.entries) {
+              final balance = entry.value;
+              final memberName = memberMap[entry.key] ?? entry.key.substring(0, 8) + '...';
+              
+              if (balance.abs() > 0.01) { // Only show if balance is significant (> 1 cent)
+                if (balance < 0) {
+                  whoOwes.add({
+                    'userId': entry.key,
+                    'name': memberName,
+                    'balance': balance.abs(), // Show as positive amount owed
+                  });
+                } else {
+                  whoIsOwed.add({
+                    'userId': entry.key,
+                    'name': memberName,
+                    'balance': balance,
+                  });
+                }
+              }
+            }
+
+            // Sort by balance amount
+            whoOwes.sort((a, b) => (b['balance'] as double).compareTo(a['balance'] as double));
+            whoIsOwed.sort((a, b) => (b['balance'] as double).compareTo(a['balance'] as double));
+
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.account_balance_wallet,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Splits & Balances',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Who is Owed (Positive Balances)
+                    if (whoIsOwed.isNotEmpty) ...[
+                      Text(
+                        'Who is Owed',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green[700],
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...whoIsOwed.map((member) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: Colors.green[100],
+                                child: Text(
+                                  (member['name'] as String)[0].toUpperCase(),
+                                  style: TextStyle(
+                                    color: Colors.green[900],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      member['name'] as String,
+                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                    ),
+                                    Text(
+                                      'Should receive',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: Colors.grey[600],
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                _formatCurrency(member['balance'] as double, group.currency),
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green[700],
+                                    ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Who Owes (Negative Balances)
+                    if (whoOwes.isNotEmpty) ...[
+                      Text(
+                        'Who Owes',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.red[700],
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...whoOwes.map((member) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: Colors.red[100],
+                                child: Text(
+                                  (member['name'] as String)[0].toUpperCase(),
+                                  style: TextStyle(
+                                    color: Colors.red[900],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      member['name'] as String,
+                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                    ),
+                                    Text(
+                                      'Should pay',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: Colors.grey[600],
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                _formatCurrency(member['balance'] as double, group.currency),
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red[700],
+                                    ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+
+                    // All Settled
+                    if (whoOwes.isEmpty && whoIsOwed.isEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.check_circle_outline,
+                              color: Colors.green[400],
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'All balances are settled!',
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: Colors.green[700],
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => const SizedBox(),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => const SizedBox(),
     );
   }
 

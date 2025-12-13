@@ -20,11 +20,12 @@ final groupMembersProvider = FutureProvider.family((ref, String groupId) async {
 
   // Get user IDs
   final userIds = memberList.map((e) => e['user_id'] as String).toList();
-
-  // Then get profiles for those users
   if (userIds.isEmpty) return <Map<String, dynamic>>[];
 
+  // Query all profiles at once using .or() with proper syntax
+  // Build OR conditions: id.eq.uuid1,id.eq.uuid2,...
   final orConditions = userIds.map((id) => 'id.eq.$id').join(',');
+  
   final profilesRes = await supabase()
       .from('profiles')
       .select('id, name')
@@ -33,18 +34,26 @@ final groupMembersProvider = FutureProvider.family((ref, String groupId) async {
   final profilesMap = <String, String>{};
   for (final profile in (profilesRes as List)) {
     final id = profile['id'] as String;
-    final name = (profile['name'] as String?)?.isNotEmpty == true
-        ? profile['name'] as String
-        : 'Unknown';
-    profilesMap[id] = name;
+    final name = profile['name'] as String?;
+    
+    // Use name if it exists and is not empty
+    if (name != null && name.trim().isNotEmpty) {
+      profilesMap[id] = name.trim();
+    } else {
+      // Name is null or empty, create a readable fallback
+      profilesMap[id] = 'User ${id.substring(0, 8)}';
+    }
   }
 
-  // Combine and return
+  // Combine and return - ensure all members have a name
+  // If a profile wasn't found, create a fallback name
   return memberList.map((e) {
     final userId = e['user_id'] as String;
+    final name = profilesMap[userId];
+    
     return {
       'user_id': userId,
-      'name': profilesMap[userId] ?? 'Unknown',
+      'name': name ?? 'User ${userId.substring(0, 8)}',
     };
   }).toList();
 });

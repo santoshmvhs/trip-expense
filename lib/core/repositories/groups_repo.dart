@@ -1,4 +1,5 @@
 import 'dart:developer' as developer;
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../supabase/supabase_client.dart';
 import '../models/group.dart';
@@ -115,6 +116,16 @@ class GroupsRepo {
           // Create invitation
           debugPrint('📝 Creating new invitation...');
           developer.log('📝 Creating new invitation...');
+          
+          // Generate a unique token
+          final random = Random();
+          final tokenBytes = List<int>.generate(32, (i) => random.nextInt(256));
+          final tokenString = tokenBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+          final generatedToken = '${DateTime.now().millisecondsSinceEpoch}_$tokenString';
+          
+          // Set expiration to 30 days from now
+          final expiresAt = DateTime.now().add(const Duration(days: 30));
+          
           final invitationResponse = await supabase()
               .from('group_invitations')
               .insert({
@@ -122,6 +133,8 @@ class GroupsRepo {
                 'email': normalizedEmail,
                 'invited_by': uid,
                 'status': 'pending',
+                'token': generatedToken,
+                'expires_at': expiresAt.toIso8601String(),
               })
               .select('token')
               .single();
@@ -223,11 +236,23 @@ class GroupsRepo {
         }
 
         debugPrint('📝 Creating invitation (fallback)...');
+        
+        // Generate a unique token
+        final random = Random();
+        final tokenBytes = List<int>.generate(32, (i) => random.nextInt(256));
+        final tokenString = tokenBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+        final generatedToken = '${DateTime.now().millisecondsSinceEpoch}_$tokenString';
+        
+        // Set expiration to 30 days from now
+        final expiresAt = DateTime.now().add(const Duration(days: 30));
+        
         await supabase().from('group_invitations').insert({
           'group_id': groupId,
           'email': normalizedEmail,
           'invited_by': uid,
           'status': 'pending',
+          'token': generatedToken,
+          'expires_at': expiresAt.toIso8601String(),
         });
 
         debugPrint('✅ Invitation created (fallback)');
