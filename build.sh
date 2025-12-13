@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Get the directory where the script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
+
 # Install Flutter
 echo "Installing Flutter..."
 FLUTTER_VERSION="3.24.0"
@@ -10,12 +14,18 @@ if [ ! -d "$FLUTTER_SDK_PATH" ]; then
   git clone --branch stable https://github.com/flutter/flutter.git -c advice.detachedHead=false "$FLUTTER_SDK_PATH"
   cd "$FLUTTER_SDK_PATH"
   git checkout $FLUTTER_VERSION
+  cd "$SCRIPT_DIR"
 fi
 
 export PATH="$FLUTTER_SDK_PATH/bin:$PATH"
 
 # Verify Flutter installation
 flutter --version
+
+# Ensure we're in the project directory
+cd "$SCRIPT_DIR"
+pwd
+ls -la
 
 # Get dependencies
 echo "Getting Flutter dependencies..."
