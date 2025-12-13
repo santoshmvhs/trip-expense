@@ -10,6 +10,7 @@ import '../../core/supabase/supabase_client.dart';
 import 'add_budget_dialog.dart';
 import 'auto_budget_dialog.dart';
 import 'budget_card.dart';
+import 'trip_budget_planner.dart';
 
 class BudgetsTab extends ConsumerWidget {
   final String groupId;
@@ -44,14 +45,11 @@ class BudgetsTab extends ConsumerWidget {
           Expanded(
             child: TabBarView(
               children: [
-                // Group Budgets Tab
-                _buildGroupBudgetsTab(
-                  context,
-                  ref,
-                  asyncGroupBudgets,
-                  asyncExpenses,
-                  asyncExpensesWithSplits,
-                  currentUserId,
+                // Trip Budget Planner Tab
+                TripBudgetPlanner(
+                  groupId: groupId,
+                  groupCurrency: groupCurrency,
+                  isAdmin: currentUserId == groupCreatedBy,
                 ),
                 // User Budgets Tab
                 _buildUserBudgetsTab(
