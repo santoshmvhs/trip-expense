@@ -41,11 +41,20 @@ git push -u origin main
 6. Authorize Cloudflare to access your repositories
 7. Select your repository (`trip`)
 8. Configure build settings:
-   - **Framework preset**: None (or Flutter if available)
-   - **Build command**: `flutter build web --release`
+   - **Framework preset**: None
+   - **Build command**: `bash build.sh` or use the GitHub Actions method below
    - **Build output directory**: `build/web`
    - **Root directory**: `/` (leave empty)
+   - **Environment variables**: (Optional) Add any needed variables
 9. Click **Save and Deploy**
+
+**Note:** Cloudflare Pages doesn't have Flutter pre-installed. You have two options:
+
+### Option A: Use the build script (may be slow)
+Use `bash build.sh` as the build command. This will install Flutter during build (takes ~5-10 minutes).
+
+### Option B: Use GitHub Actions (Recommended - Faster)
+See "Method 4: GitHub Actions + Cloudflare Pages" below for a faster approach.
 
 ### Step 4: Configure Environment Variables (if needed)
 
