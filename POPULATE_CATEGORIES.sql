@@ -14,8 +14,7 @@ INSERT INTO public.categories (id, name, sort_order) VALUES
   (gen_random_uuid(), 'Tips & Gratuities', 9),
   (gen_random_uuid(), 'Banking & Fees', 10),
   (gen_random_uuid(), 'Personal Care', 11),
-  (gen_random_uuid(), 'Miscellaneous', 12),
-  (gen_random_uuid(), 'Prostitution', 13)
+  (gen_random_uuid(), 'Miscellaneous', 12)
 ON CONFLICT (name) DO NOTHING;
 
 -- Insert Subcategories for Food & Dining
@@ -158,15 +157,5 @@ FROM public.categories c,
   ('Locker', 4), ('Other', 5)
 ) AS sub(name, sort_order)
 WHERE c.name = 'Miscellaneous'
-ON CONFLICT (category_id, name) DO NOTHING;
-
--- Insert Subcategories for Prostitution
-INSERT INTO public.subcategories (category_id, name, sort_order)
-SELECT c.id, sub.name, sub.sort_order
-FROM public.categories c,
-(VALUES
-  ('Prostitutes', 1), ('Strip Clubs', 2), ('Sex Workers', 3), ('Other', 4)
-) AS sub(name, sort_order)
-WHERE c.name = 'Prostitution'
 ON CONFLICT (category_id, name) DO NOTHING;
 
