@@ -7,13 +7,13 @@ cd "$SCRIPT_DIR"
 
 # Install Flutter
 echo "Installing Flutter..."
-FLUTTER_VERSION="3.24.0"
+FLUTTER_VERSION="stable"  # Use latest stable version
 FLUTTER_SDK_PATH="$HOME/flutter"
 
 if [ ! -d "$FLUTTER_SDK_PATH" ]; then
-  git clone --branch stable https://github.com/flutter/flutter.git -c advice.detachedHead=false "$FLUTTER_SDK_PATH"
+  git clone --branch stable https://github.com/flutter/flutter.git "$FLUTTER_SDK_PATH"
   cd "$FLUTTER_SDK_PATH"
-  git checkout $FLUTTER_VERSION
+  git pull
   cd "$SCRIPT_DIR"
 fi
 
