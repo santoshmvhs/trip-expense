@@ -504,36 +504,30 @@ class _TripBudgetDialogState extends ConsumerState<TripBudgetDialog> {
                           (c) => c.name == selectedCategory,
                           orElse: () => throw Exception('Category not found'),
                         );
-                        final subcategoriesAsync = ref.watch(subcategoriesProvider(selectedCat.id));
-                        return subcategoriesAsync.when(
-                          data: (subcategories) {
-
-                            return DropdownButtonFormField<String>(
-                              value: selectedSubcategory,
-                              decoration: InputDecoration(
-                                labelText: 'Subcategory',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                filled: true,
-                              ),
-                              items: [
-                                const DropdownMenuItem(value: null, child: Text('None')),
-                                ...subcategories.map((sub) => DropdownMenuItem(
-                                      value: sub.name,
-                                      child: Text(sub.name),
-                                    )),
-                              ],
+                        final subcategories = ref.watch(subcategoriesProvider(selectedCat.id));
+                        
+                        return DropdownButtonFormField<String>(
+                          value: selectedSubcategory,
+                          decoration: InputDecoration(
+                            labelText: 'Subcategory',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                          ),
+                          items: [
+                            const DropdownMenuItem(value: null, child: Text('None')),
+                            ...subcategories.map((sub) => DropdownMenuItem(
+                                  value: sub.name,
+                                  child: Text(sub.name),
+                                )),
+                          ],
                               onChanged: (value) {
                                 setDialogState(() {
                                   selectedSubcategory = value;
                                 });
                               },
                             );
-                          },
-                          loading: () => const SizedBox(),
-                          error: (_, __) => const SizedBox(),
-                        );
                       },
                     ),
 
