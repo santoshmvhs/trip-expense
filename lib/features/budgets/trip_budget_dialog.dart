@@ -499,38 +499,41 @@ class _TripBudgetDialogState extends ConsumerState<TripBudgetDialog> {
 
                   // Subcategory
                   if (selectedCategory != null)
-                    FutureBuilder(
-                      future: ref.read(subcategoriesProvider.future),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
-                          return const SizedBox();
-                        }
-                        final subcategories = snapshot.data!
-                            .where((s) => s.categoryId ==
-                                categories.firstWhere((c) => c.name == selectedCategory).id)
-                            .toList();
+                    Builder(
+                      builder: (context) {
+                        final selectedCat = categories.firstWhere(
+                          (c) => c.name == selectedCategory,
+                          orElse: () => throw Exception('Category not found'),
+                        );
+                        final subcategoriesAsync = ref.watch(subcategoriesProvider(selectedCat.id));
+                        return subcategoriesAsync.when(
+                          data: (subcategories) {
 
-                        return DropdownButtonFormField<String>(
-                          value: selectedSubcategory,
-                          decoration: InputDecoration(
-                            labelText: 'Subcategory',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                          ),
-                          items: [
-                            const DropdownMenuItem(value: null, child: Text('None')),
-                            ...subcategories.map((sub) => DropdownMenuItem(
-                                  value: sub.name,
-                                  child: Text(sub.name),
-                                )),
-                          ],
-                          onChanged: (value) {
-                            setDialogState(() {
-                              selectedSubcategory = value;
-                            });
+                            return DropdownButtonFormField<String>(
+                              value: selectedSubcategory,
+                              decoration: InputDecoration(
+                                labelText: 'Subcategory',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                filled: true,
+                              ),
+                              items: [
+                                const DropdownMenuItem(value: null, child: Text('None')),
+                                ...subcategories.map((sub) => DropdownMenuItem(
+                                      value: sub.name,
+                                      child: Text(sub.name),
+                                    )),
+                              ],
+                              onChanged: (value) {
+                                setDialogState(() {
+                                  selectedSubcategory = value;
+                                });
+                              },
+                            );
                           },
+                          loading: () => const SizedBox(),
+                          error: (_, __) => const SizedBox(),
                         );
                       },
                     ),

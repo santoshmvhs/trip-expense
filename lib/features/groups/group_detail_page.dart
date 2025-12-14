@@ -2051,14 +2051,6 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
                 ),
               ),
             );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) => const SizedBox(),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const SizedBox(),
-    );
   }
 
   Color _getColorForCategory(String category) {
