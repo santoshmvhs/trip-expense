@@ -44,6 +44,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
   final Map<String, TextEditingController> _splitControllers = {};
   bool _isLoading = false;
   bool _isLoadingExpense = false;
+  bool _hasInvalidatedMembers = false;
   
   // Receipt upload
   final ImagePicker _imagePicker = ImagePicker();
@@ -429,6 +430,16 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Invalidate members provider on first build to ensure fresh data
+    if (!_hasInvalidatedMembers) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.invalidate(groupMembersProvider(widget.groupId));
+        setState(() {
+          _hasInvalidatedMembers = true;
+        });
+      });
+    }
+    
     final asyncMembers = ref.watch(groupMembersProvider(widget.groupId));
 
     return Scaffold(
