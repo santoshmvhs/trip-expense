@@ -30,12 +30,13 @@ final groupMembersProvider = FutureProvider.family((ref, String groupId) async {
     final userIds = memberList.map((e) => e['user_id'] as String).toList();
     if (userIds.isEmpty) return <Map<String, dynamic>>[];
 
-    // Step 2: Get all profiles in one query using 'in' filter
-    // Build the filter: id=in.(uuid1,uuid2,uuid3)
+    // Step 2: Get all profiles using OR conditions (simpler and more reliable)
+    // Build OR filter: id.eq.uuid1,id.eq.uuid2,id.eq.uuid3
+    final orConditions = userIds.map((id) => 'id.eq.$id').join(',');
     final profilesRes = await supabase()
         .from('profiles')
         .select('id, name')
-        .in_('id', userIds);
+        .or(orConditions);
 
     // Create a map of userId -> name
     final profilesMap = <String, String>{};
