@@ -444,8 +444,7 @@ class _TripBudgetDialogState extends ConsumerState<TripBudgetDialog> {
   }
 
   Future<void> _showAllocationDialog({TripBudgetAllocation? allocation, int? index}) async {
-    final categoriesAsync = ref.read(categoriesProvider.future);
-    final categories = await categoriesAsync;
+    final categories = ref.read(categoriesProvider);
 
     String? selectedCategory;
     String? selectedSubcategory;

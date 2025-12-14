@@ -45,7 +45,6 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
   bool _isLoading = false;
   bool _isLoadingExpense = false;
   bool _hasInvalidatedMembers = false;
-  bool _hasPrefetchedCategories = false;
   
   // Receipt upload
   final ImagePicker _imagePicker = ImagePicker();
@@ -91,7 +90,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
       
       // Try to find category ID from name
       if (_selectedCategoryName != null) {
-        final categories = await ref.read(categoriesProvider.future);
+        final categories = ref.read(categoriesProvider);
         try {
           final category = categories.firstWhere(
             (c) => c.name == _selectedCategoryName,
@@ -100,7 +99,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
           
           // Try to find subcategory ID from name
           if (_selectedSubcategoryName != null) {
-            final subcategories = await ref.read(subcategoriesProvider(category.id).future);
+            final subcategories = ref.read(subcategoriesProvider(category.id));
             try {
               final subcategory = subcategories.firstWhere(
                 (s) => s.name == _selectedSubcategoryName,
@@ -431,15 +430,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Pre-fetch categories immediately to avoid delay when opening dropdown
-    if (!_hasPrefetchedCategories) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(categoriesProvider.future);
-        setState(() {
-          _hasPrefetchedCategories = true;
-        });
-      });
-    }
+    // Categories are now loaded immediately via StateNotifier - no pre-fetch needed
     
     // Invalidate members provider on first build to ensure fresh data
     if (!_hasInvalidatedMembers) {
@@ -512,153 +503,161 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
             ),
             const SizedBox(height: 16),
 
-            // Category
-            ref.watch(categoriesProvider).when(
-              data: (categories) => DropdownButtonFormField<String>(
-                value: _selectedCategoryId,
-                decoration: InputDecoration(
-                  labelText: 'Category',
-                  hintText: 'Select category',
-                  prefixIcon: _selectedCategoryId != null
-                      ? Icon(
-                          CategoryIcons.getIconForCategory(
-                            categories.firstWhere((c) => c.id == _selectedCategoryId).name,
-                          ),
-                          color: CategoryIcons.getColorForCategory(
-                            categories.firstWhere((c) => c.id == _selectedCategoryId).name,
-                          ),
-                        )
-                      : const Icon(Icons.category_outlined),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.surface,
-                ),
-                items: categories.map((category) {
-                  final icon = CategoryIcons.getIconForCategory(category.name);
-                  final color = CategoryIcons.getColorForCategory(category.name);
-                  return DropdownMenuItem(
-                    value: category.id,
-                    child: Row(
-                      children: [
-                        Icon(icon, color: color, size: 20),
-                        const SizedBox(width: 12),
-                        Text(category.name),
-                      ],
+            // Category - Now uses synchronous provider for instant dropdown
+            Builder(
+              builder: (context) {
+                final categories = ref.watch(categoriesProvider);
+                final categoriesState = ref.watch(categoriesDataProvider);
+                
+                // Show loading only if truly loading and no cached data
+                if (categoriesState.isLoading && categories.isEmpty) {
+                  return DropdownButtonFormField<String>(
+                    value: null,
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      hintText: 'Loading categories...',
+                      prefixIcon: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                     ),
+                    items: const [],
+                    onChanged: (_) {},
                   );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCategoryId = value;
-                    final selectedCategory = categories.firstWhere((c) => c.id == value);
-                    _selectedCategoryName = selectedCategory.name;
-                    _selectedSubcategoryId = null;
-                    _selectedSubcategoryName = null; // Reset subcategory when category changes
-                  });
-                },
-              ),
-              loading: () => DropdownButtonFormField<String>(
-                value: null,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  hintText: 'Loading...',
-                ),
-                items: const [],
-                onChanged: (_) {}, // No-op for loading state
-              ),
-              error: (_, __) => DropdownButtonFormField<String>(
-                value: null,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  hintText: 'Error loading categories',
-                ),
-                items: const [],
-                onChanged: (_) {}, // No-op for error state
-              ),
+                }
+                
+                // Show error state if there's an error
+                if (categoriesState.hasError) {
+                  return DropdownButtonFormField<String>(
+                    value: null,
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      hintText: 'Error loading categories',
+                      prefixIcon: Icon(Icons.error_outline, color: Colors.red),
+                    ),
+                    items: const [],
+                    onChanged: (_) {},
+                  );
+                }
+                
+                // If no categories loaded, show empty state
+                if (categories.isEmpty) {
+                  return DropdownButtonFormField<String>(
+                    value: null,
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      hintText: 'No categories available',
+                    ),
+                    items: const [],
+                    onChanged: (_) {},
+                  );
+                }
+                
+                return DropdownButtonFormField<String>(
+                  value: _selectedCategoryId,
+                  decoration: InputDecoration(
+                    labelText: 'Category',
+                    hintText: 'Select category',
+                    prefixIcon: _selectedCategoryId != null
+                        ? Icon(
+                            CategoryIcons.getIconForCategory(
+                              categories.firstWhere((c) => c.id == _selectedCategoryId).name,
+                            ),
+                            color: CategoryIcons.getColorForCategory(
+                              categories.firstWhere((c) => c.id == _selectedCategoryId).name,
+                            ),
+                          )
+                        : const Icon(Icons.category_outlined),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surface,
+                  ),
+                  items: categories.map((category) {
+                    final icon = CategoryIcons.getIconForCategory(category.name);
+                    final color = CategoryIcons.getColorForCategory(category.name);
+                    return DropdownMenuItem(
+                      value: category.id,
+                      child: Row(
+                        children: [
+                          Icon(icon, color: color, size: 20),
+                          const SizedBox(width: 12),
+                          Text(category.name),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCategoryId = value;
+                      final selectedCategory = categories.firstWhere((c) => c.id == value);
+                      _selectedCategoryName = selectedCategory.name;
+                      _selectedSubcategoryId = null;
+                      _selectedSubcategoryName = null; // Reset subcategory when category changes
+                    });
+                  },
+                );
+              },
             ),
             const SizedBox(height: 16),
 
-            // Subcategory
+            // Subcategory - Now uses synchronous provider for instant dropdown
             if (_selectedCategoryId != null)
-              ref.watch(categoriesProvider).when(
-                data: (allCategories) {
-                  final selectedCategory = allCategories.firstWhere((c) => c.id == _selectedCategoryId);
-                  return ref.watch(subcategoriesProvider(_selectedCategoryId!)).when(
-                    data: (subcategories) => DropdownButtonFormField<String>(
-                      value: _selectedSubcategoryId,
-                      decoration: InputDecoration(
-                        labelText: 'Subcategory',
-                        hintText: 'Select subcategory',
-                        prefixIcon: _selectedSubcategoryId != null
-                            ? Icon(
-                                CategoryIcons.getIconForSubcategory(
-                                  subcategories.firstWhere((s) => s.id == _selectedSubcategoryId).name,
-                                ),
-                                color: CategoryIcons.getColorForCategory(selectedCategory.name),
-                              )
-                            : const Icon(Icons.label_outline),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        fillColor: Theme.of(context).colorScheme.surface,
+              Builder(
+                builder: (context) {
+                  final categories = ref.watch(categoriesProvider);
+                  final subcategories = ref.watch(subcategoriesProvider(_selectedCategoryId!));
+                  
+                  if (categories.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  
+                  final selectedCategory = categories.firstWhere((c) => c.id == _selectedCategoryId);
+                  
+                  return DropdownButtonFormField<String>(
+                    value: _selectedSubcategoryId,
+                    decoration: InputDecoration(
+                      labelText: 'Subcategory',
+                      hintText: 'Select subcategory',
+                      prefixIcon: _selectedSubcategoryId != null && subcategories.isNotEmpty
+                          ? Icon(
+                              CategoryIcons.getIconForSubcategory(
+                                subcategories.firstWhere((s) => s.id == _selectedSubcategoryId).name,
+                              ),
+                              color: CategoryIcons.getColorForCategory(selectedCategory.name),
+                            )
+                          : const Icon(Icons.label_outline),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      items: subcategories.map((subcategory) {
-                        final icon = CategoryIcons.getIconForSubcategory(subcategory.name);
-                        final categoryColor = CategoryIcons.getColorForCategory(selectedCategory.name);
-                        return DropdownMenuItem(
-                          value: subcategory.id,
-                          child: Row(
-                            children: [
-                              Icon(icon, color: categoryColor, size: 20),
-                              const SizedBox(width: 12),
-                              Expanded(child: Text(subcategory.name)),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedSubcategoryId = value;
-                          final selectedSubcategory = subcategories.firstWhere((s) => s.id == value);
-                          _selectedSubcategoryName = selectedSubcategory.name;
-                        });
-                      },
+                      filled: true,
+                      fillColor: Theme.of(context).colorScheme.surface,
                     ),
-                    loading: () => DropdownButtonFormField<String>(
-                      value: null,
-                      decoration: InputDecoration(
-                        labelText: 'Subcategory',
-                        hintText: 'Loading...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                    items: subcategories.map((subcategory) {
+                      final icon = CategoryIcons.getIconForSubcategory(subcategory.name);
+                      final categoryColor = CategoryIcons.getColorForCategory(selectedCategory.name);
+                      return DropdownMenuItem(
+                        value: subcategory.id,
+                        child: Row(
+                          children: [
+                            Icon(icon, color: categoryColor, size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(child: Text(subcategory.name)),
+                          ],
                         ),
-                        filled: true,
-                        fillColor: Theme.of(context).colorScheme.surface,
-                      ),
-                      items: const [],
-                      onChanged: (_) {},
-                    ),
-                    error: (_, __) => DropdownButtonFormField<String>(
-                      value: null,
-                      decoration: InputDecoration(
-                        labelText: 'Subcategory',
-                        hintText: 'Error loading subcategories',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        fillColor: Theme.of(context).colorScheme.surface,
-                      ),
-                      items: const [],
-                      onChanged: (_) {},
-                    ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedSubcategoryId = value;
+                        final selectedSubcategory = subcategories.firstWhere((s) => s.id == value);
+                        _selectedSubcategoryName = selectedSubcategory.name;
+                      });
+                    },
                   );
                 },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
               ),
             if (_selectedCategoryId != null) const SizedBox(height: 16),
 
@@ -688,10 +687,21 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
             // Paid by
             asyncMembers.when(
               data: (members) {
+                // Default to current logged-in user if available
                 if (_selectedPaidBy == null && members.isNotEmpty) {
+                  final currentUserId = currentUser()?.id;
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     setState(() {
-                      _selectedPaidBy = members[0]['user_id'] as String;
+                      // Try to find current user in members list, otherwise use first member
+                      if (currentUserId != null) {
+                        final currentUserMember = members.firstWhere(
+                          (m) => m['user_id'] == currentUserId,
+                          orElse: () => members[0],
+                        );
+                        _selectedPaidBy = currentUserMember['user_id'] as String;
+                      } else {
+                        _selectedPaidBy = members[0]['user_id'] as String;
+                      }
                     });
                   });
                 }
@@ -709,24 +719,47 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
                   items: members.map((member) {
                     final userId = member['user_id'] as String;
                     final name = member['name'] as String;
+                    final currentUserId = currentUser()?.id;
+                    final isCurrentUser = userId == currentUserId;
                     return DropdownMenuItem(
                       value: userId,
                       child: Row(
                         children: [
                           CircleAvatar(
                             radius: 12,
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            backgroundColor: isCurrentUser
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.primaryContainer,
                             child: Text(
                               name[0].toUpperCase(),
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                color: isCurrentUser
+                                    ? Theme.of(context).colorScheme.onPrimary
+                                    : Theme.of(context).colorScheme.onPrimaryContainer,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
                           const SizedBox(width: 12),
-                          Text(name),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Text(name),
+                                if (isCurrentUser) ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '(You)',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Theme.of(context).colorScheme.primary,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     );
