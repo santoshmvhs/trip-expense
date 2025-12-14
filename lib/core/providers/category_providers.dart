@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../repositories/categories_repo.dart';
 import '../models/category.dart';
@@ -23,6 +24,10 @@ class CategoriesNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>>
       final categories = results[0] as List<Category>;
       final allSubcategories = results[1] as List<Subcategory>;
       
+      // Debug: Log what we got
+      debugPrint('📦 Categories loaded: ${categories.length}');
+      debugPrint('📦 Subcategories loaded: ${allSubcategories.length}');
+      
       // Group subcategories by category_id
       final groupedSubcategories = <String, List<Subcategory>>{};
       for (final subcategory in allSubcategories) {
@@ -36,7 +41,11 @@ class CategoriesNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>>
         'categories': categories,
         'subcategoriesMap': groupedSubcategories,
       });
+      
+      debugPrint('✅ Categories data loaded successfully');
     } catch (e, stackTrace) {
+      debugPrint('❌ Error loading categories: $e');
+      debugPrint('❌ Stack trace: $stackTrace');
       state = AsyncValue.error(e, stackTrace);
     }
   }

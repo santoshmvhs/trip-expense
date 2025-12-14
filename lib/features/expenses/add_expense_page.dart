@@ -59,9 +59,44 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
   @override
   void initState() {
     super.initState();
+    // Listen for categories to load so we can resolve IDs in edit mode
+    ref.listen<AsyncValue<Map<String, dynamic>>>(
+      categoriesDataProvider,
+      (prev, next) {
+        if (prev?.isLoading == true && next.hasValue) {
+          _resolveCategoryIdsFromNames();
+        }
+      },
+    );
     if (widget.expenseId != null) {
       _loadExpenseForEdit();
     }
+  }
+
+  // Helper to resolve category/subcategory IDs from names after data loads
+  void _resolveCategoryIdsFromNames() {
+    if (_selectedCategoryName == null) return;
+    
+    final data = ref.read(categoriesDataProvider);
+    data.whenData((map) {
+      final categories = map['categories'] as List<Category>;
+      final category = categories.where((c) => c.name == _selectedCategoryName).toList();
+      if (category.isEmpty) return;
+      
+      final categoryId = category.first.id;
+      final subMap = map['subcategoriesMap'] as Map<String, List<Subcategory>>;
+      final subs = subMap[categoryId] ?? [];
+      
+      setState(() {
+        _selectedCategoryId = categoryId;
+        if (_selectedSubcategoryName != null) {
+          final sub = subs.where((s) => s.name == _selectedSubcategoryName).toList();
+          if (sub.isNotEmpty) {
+            _selectedSubcategoryId = sub.first.id;
+          }
+        }
+      });
+    });
   }
 
   Future<void> _loadExpenseForEdit() async {
@@ -88,31 +123,8 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
       _selectedCategoryName = expense.category;
       _selectedSubcategoryName = expense.subcategory;
       
-      // Try to find category ID from name
-      if (_selectedCategoryName != null) {
-        final categories = ref.read(categoriesProvider);
-        try {
-          final category = categories.firstWhere(
-            (c) => c.name == _selectedCategoryName,
-          );
-          _selectedCategoryId = category.id;
-          
-          // Try to find subcategory ID from name
-          if (_selectedSubcategoryName != null) {
-            final subcategories = ref.read(subcategoriesProvider(category.id));
-            try {
-              final subcategory = subcategories.firstWhere(
-                (s) => s.name == _selectedSubcategoryName,
-              );
-              _selectedSubcategoryId = subcategory.id;
-            } catch (e) {
-              // Subcategory not found, keep name only
-            }
-          }
-        } catch (e) {
-          // Category not found, keep name only
-        }
-      }
+      // Try to resolve IDs immediately if data is already loaded
+      _resolveCategoryIdsFromNames();
       _notesController.text = expense.notes ?? '';
       _receiptPath = expense.receiptPath;
       _isRecurring = expense.isRecurring;
@@ -527,17 +539,33 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
                   );
                 }
                 
-                // Show error state if there's an error
+                // Show error state if there's an error - display actual error message
                 if (categoriesState.hasError) {
-                  return DropdownButtonFormField<String>(
-                    value: null,
-                    decoration: const InputDecoration(
-                      labelText: 'Category',
-                      hintText: 'Error loading categories',
-                      prefixIcon: Icon(Icons.error_outline, color: Colors.red),
-                    ),
-                    items: const [],
-                    onChanged: (_) {},
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DropdownButtonFormField<String>(
+                        value: null,
+                        decoration: const InputDecoration(
+                          labelText: 'Category',
+                          hintText: 'Error loading categories',
+                          prefixIcon: Icon(Icons.error_outline, color: Colors.red),
+                        ),
+                        items: const [],
+                        onChanged: (_) {},
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          'Category error: ${categoriesState.error}',
+                          style: TextStyle(
+                            color: Colors.red[700],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
                   );
                 }
                 
