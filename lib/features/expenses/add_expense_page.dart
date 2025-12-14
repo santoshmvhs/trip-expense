@@ -45,6 +45,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
   bool _isLoading = false;
   bool _isLoadingExpense = false;
   bool _hasInvalidatedMembers = false;
+  bool _hasPrefetchedCategories = false;
   
   // Receipt upload
   final ImagePicker _imagePicker = ImagePicker();
@@ -430,6 +431,16 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Pre-fetch categories immediately to avoid delay when opening dropdown
+    if (!_hasPrefetchedCategories) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(categoriesProvider.future);
+        setState(() {
+          _hasPrefetchedCategories = true;
+        });
+      });
+    }
+    
     // Invalidate members provider on first build to ensure fresh data
     if (!_hasInvalidatedMembers) {
       WidgetsBinding.instance.addPostFrameCallback((_) {

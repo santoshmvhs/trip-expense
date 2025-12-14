@@ -5,6 +5,8 @@ import '../models/category.dart';
 final categoriesRepoProvider = Provider((_) => CategoriesRepo());
 
 final categoriesProvider = FutureProvider((ref) {
+  // Keep data alive to cache it and avoid re-fetching
+  ref.keepAlive();
   return ref.watch(categoriesRepoProvider).getCategories();
 });
 
