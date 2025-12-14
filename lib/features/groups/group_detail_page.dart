@@ -1757,69 +1757,134 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
       data: (expensesWithSplits) {
         return asyncMembers.when(
           data: (members) {
-            // Build member name map
-            final memberMap = <String, String>{};
-            for (final member in members) {
-              memberMap[member['user_id'] as String] = member['name'] as String;
-            }
-
-            // Calculate balances: positive = owed to them, negative = they owe
-            final balances = <String, double>{};
-            
-            // Initialize all members with 0 balance
-            for (final member in members) {
-              final userId = member['user_id'] as String;
-              balances[userId] = 0.0;
-            }
-
-            // Process each expense with splits
-            for (final expenseWithSplits in expensesWithSplits) {
-              final expense = expenseWithSplits.expense;
-              final splits = expenseWithSplits.splits;
-
-              // Person who paid gets credited (positive balance)
-              if (balances.containsKey(expense.paidBy)) {
-                balances[expense.paidBy] = (balances[expense.paidBy] ?? 0) + expense.amount;
-              }
-
-              // People who owe get debited (negative balance)
-              for (final split in splits) {
-                if (balances.containsKey(split.userId)) {
-                  balances[split.userId] = (balances[split.userId] ?? 0) - split.share;
+            return FutureBuilder<Map<String, String>>(
+              future: _buildMemberMapWithMissingUsers(members, expensesWithSplits),
+              builder: (context, memberMapSnapshot) {
+                if (!memberMapSnapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
                 }
-              }
+                final memberMap = memberMapSnapshot.data!;
+                return _buildBalancesWidget(context, expensesWithSplits, memberMap, group);
+              },
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => const SizedBox(),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => const SizedBox(),
+    );
+  }
+
+  Future<Map<String, String>> _buildMemberMapWithMissingUsers(
+    List members,
+    List expensesWithSplits,
+  ) async {
+    // Build initial member name map
+    final memberMap = <String, String>{};
+    for (final member in members) {
+      memberMap[member['user_id'] as String] = member['name'] as String;
+    }
+
+    // Collect all user IDs from expenses and splits
+    final allUserIds = <String>{};
+    for (final expenseWithSplits in expensesWithSplits) {
+      allUserIds.add(expenseWithSplits.expense.paidBy);
+      for (final split in expenseWithSplits.splits) {
+        allUserIds.add(split.userId);
+      }
+    }
+
+    // Fetch names for any users not in members list
+    final missingUserIds = allUserIds.where((userId) => !memberMap.containsKey(userId)).toList();
+    if (missingUserIds.isNotEmpty) {
+      for (final userId in missingUserIds) {
+        try {
+          final profileRes = await supabase()
+              .from('profiles')
+              .select('id, name')
+              .eq('id', userId)
+              .maybeSingle();
+          
+          if (profileRes != null) {
+            final name = profileRes['name'] as String?;
+            if (name != null && name.trim().isNotEmpty) {
+              memberMap[userId] = name.trim();
+            } else {
+              memberMap[userId] = 'User ${userId.substring(0, 8)}';
             }
+          } else {
+            memberMap[userId] = 'User ${userId.substring(0, 8)}';
+          }
+        } catch (e) {
+          memberMap[userId] = 'User ${userId.substring(0, 8)}';
+        }
+      }
+    }
 
-            // Separate into who owes (negative) and who is owed (positive)
-            final whoOwes = <Map<String, dynamic>>[];
-            final whoIsOwed = <Map<String, dynamic>>[];
+    return memberMap;
+  }
 
-            for (final entry in balances.entries) {
-              final balance = entry.value;
-              final memberName = memberMap[entry.key] ?? entry.key.substring(0, 8) + '...';
-              
-              if (balance.abs() > 0.01) { // Only show if balance is significant (> 1 cent)
-                if (balance < 0) {
-                  whoOwes.add({
-                    'userId': entry.key,
-                    'name': memberName,
-                    'balance': balance.abs(), // Show as positive amount owed
-                  });
-                } else {
-                  whoIsOwed.add({
-                    'userId': entry.key,
-                    'name': memberName,
-                    'balance': balance,
-                  });
-                }
-              }
-            }
+  Widget _buildBalancesWidget(
+    BuildContext context,
+    List expensesWithSplits,
+    Map<String, String> memberMap,
+    Group group,
+  ) {
+    // Calculate balances: positive = owed to them, negative = they owe
+    final balances = <String, double>{};
 
-            // Sort by balance amount
-            whoOwes.sort((a, b) => (b['balance'] as double).compareTo(a['balance'] as double));
-            whoIsOwed.sort((a, b) => (b['balance'] as double).compareTo(a['balance'] as double));
+    // Process each expense with splits
+    for (final expenseWithSplits in expensesWithSplits) {
+      final expense = expenseWithSplits.expense;
+      final splits = expenseWithSplits.splits;
 
-            return Card(
+      // Person who paid gets credited (positive balance)
+      if (!balances.containsKey(expense.paidBy)) {
+        balances[expense.paidBy] = 0.0;
+      }
+      balances[expense.paidBy] = (balances[expense.paidBy] ?? 0) + expense.amount;
+
+      // People who owe get debited (negative balance)
+      for (final split in splits) {
+        if (!balances.containsKey(split.userId)) {
+          balances[split.userId] = 0.0;
+        }
+        balances[split.userId] = (balances[split.userId] ?? 0) - split.share;
+      }
+    }
+
+    // Separate into who owes (negative) and who is owed (positive)
+    final whoOwes = <Map<String, dynamic>>[];
+    final whoIsOwed = <Map<String, dynamic>>[];
+
+    for (final entry in balances.entries) {
+      final balance = entry.value;
+      final memberName = memberMap[entry.key] ?? 'User ${entry.key.substring(0, 8)}';
+      
+      if (balance.abs() > 0.01) { // Only show if balance is significant (> 1 cent)
+        if (balance < 0) {
+          whoOwes.add({
+            'userId': entry.key,
+            'name': memberName,
+            'balance': balance.abs(), // Show as positive amount owed
+          });
+        } else {
+          whoIsOwed.add({
+            'userId': entry.key,
+            'name': memberName,
+            'balance': balance,
+          });
+        }
+      }
+    }
+
+    // Sort by balance amount
+    whoOwes.sort((a, b) => (b['balance'] as double).compareTo(a['balance'] as double));
+    whoIsOwed.sort((a, b) => (b['balance'] as double).compareTo(a['balance'] as double));
+
+    return Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
