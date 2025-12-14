@@ -10,8 +10,6 @@ final groupExpensesProvider = FutureProvider.family((ref, String groupId) {
 });
 
 final groupMembersProvider = FutureProvider.family((ref, String groupId) async {
-  // Auto-refresh to ensure we get latest data
-  ref.keepAlive();
   // First get group members
   final membersRes = await supabase()
       .from('group_members')
@@ -25,83 +23,59 @@ final groupMembersProvider = FutureProvider.family((ref, String groupId) async {
   final userIds = memberList.map((e) => e['user_id'] as String).toList();
   if (userIds.isEmpty) return <Map<String, dynamic>>[];
 
-  // Query all profiles at once using filter with 'in' operator
+  // Query profiles individually - most reliable approach
   final profilesMap = <String, String>{};
   
-  try {
-    // Build filter query for all user IDs
-    var query = supabase()
-        .from('profiles')
-        .select('id, name');
-    
-    // Add filter conditions for each user ID
-    for (int i = 0; i < userIds.length; i++) {
-      if (i == 0) {
-        query = query.eq('id', userIds[i]);
-      } else {
-        query = query.or('id.eq.${userIds[i]}');
-      }
-    }
-    
-    final profilesRes = await query;
-    
-    if (kDebugMode) {
-      debugPrint('🔍 Fetched ${(profilesRes as List).length} profiles for ${userIds.length} user IDs');
-    }
-    
-    // Build map from results
-    for (final profile in (profilesRes as List)) {
-      final id = profile['id'] as String;
-      final name = profile['name'];
+  for (final userId in userIds) {
+    try {
+      final profileRes = await supabase()
+          .from('profiles')
+          .select('id, name')
+          .eq('id', userId)
+          .maybeSingle();
       
-      if (name is String && name.trim().isNotEmpty) {
-        profilesMap[id] = name.trim();
-        if (kDebugMode) {
-          debugPrint('✅ Profile $id: ${name.trim()}');
-        }
-      } else {
-        profilesMap[id] = 'User ${id.substring(0, 8)}';
-        if (kDebugMode) {
-          debugPrint('⚠️ Profile $id: name is null/empty, using fallback');
-        }
-      }
-    }
-    
-    // Fill in fallbacks for any missing profiles
-    for (final userId in userIds) {
-      if (!profilesMap.containsKey(userId)) {
-        profilesMap[userId] = 'User ${userId.substring(0, 8)}';
-        if (kDebugMode) {
-          debugPrint('❌ Profile $userId: not found in query results, using fallback');
-        }
-      }
-    }
-  } catch (e, stackTrace) {
-    // If batch query fails, fall back to individual queries
-    if (kDebugMode) {
-      debugPrint('❌ Batch query failed, trying individual queries: $e');
-    }
-    
-    for (final userId in userIds) {
-      try {
-        final profileRes = await supabase()
-            .from('profiles')
-            .select('id, name')
-            .eq('id', userId)
-            .maybeSingle();
-        
+      if (kDebugMode) {
+        debugPrint('🔍 Querying profile for userId: ${userId.substring(0, 8)}...');
+        debugPrint('   Result: ${profileRes != null ? "Found" : "Not found"}');
         if (profileRes != null) {
-          final name = profileRes['name'];
-          if (name is String && name.trim().isNotEmpty) {
-            profilesMap[userId] = name.trim();
-          } else {
-            profilesMap[userId] = 'User ${userId.substring(0, 8)}';
+          debugPrint('   Raw name value: ${profileRes['name']} (type: ${profileRes['name'].runtimeType})');
+        }
+      }
+      
+      if (profileRes != null) {
+        final nameValue = profileRes['name'];
+        
+        // Handle different possible types and null cases
+        String? name;
+        if (nameValue is String) {
+          name = nameValue.trim().isEmpty ? null : nameValue.trim();
+        } else if (nameValue != null) {
+          // Try to convert to string
+          name = nameValue.toString().trim().isEmpty ? null : nameValue.toString().trim();
+        }
+        
+        if (name != null && name.isNotEmpty) {
+          profilesMap[userId] = name;
+          if (kDebugMode) {
+            debugPrint('✅ Profile $userId: Using name "$name"');
           }
         } else {
           profilesMap[userId] = 'User ${userId.substring(0, 8)}';
+          if (kDebugMode) {
+            debugPrint('⚠️ Profile $userId: Name is null/empty, using fallback');
+          }
         }
-      } catch (e2) {
+      } else {
         profilesMap[userId] = 'User ${userId.substring(0, 8)}';
+        if (kDebugMode) {
+          debugPrint('❌ Profile $userId: Profile not found in database');
+        }
+      }
+    } catch (e, stackTrace) {
+      profilesMap[userId] = 'User ${userId.substring(0, 8)}';
+      if (kDebugMode) {
+        debugPrint('❌ Error fetching profile for $userId: $e');
+        debugPrint('   Stack: $stackTrace');
       }
     }
   }
