@@ -12,12 +12,12 @@ import '../../core/providers/expense_providers.dart';
 import '../../core/providers/expense_with_splits_provider.dart';
 import '../../core/providers/category_providers.dart';
 import '../../core/providers/activity_providers.dart';
-import '../../core/models/category.dart';
+import '../../core/models/category.dart' as models;
 import '../../core/models/expense_split.dart';
 import '../../core/utils/category_icons.dart';
 import 'expense_detail_page.dart';
 import '../groups/group_detail_page.dart'; // For groupProvider
-import '../settings/currency_settings_dialog.dart'; // For currency list
+import '../../core/constants/currencies.dart'; // For currency list
 
 class AddExpensePage extends ConsumerStatefulWidget {
   final String groupId;
@@ -82,12 +82,12 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
     
     final data = ref.read(categoriesDataProvider);
     data.whenData((map) {
-      final categories = map['categories'] as List<Category>;
+      final categories = map['categories'] as List<models.Category>;
       final category = categories.where((c) => c.name == _selectedCategoryName).toList();
       if (category.isEmpty) return;
       
       final categoryId = category.first.id;
-      final subMap = map['subcategoriesMap'] as Map<String, List<Subcategory>>;
+      final subMap = map['subcategoriesMap'] as Map<String, List<models.Subcategory>>;
       final subs = subMap[categoryId] ?? [];
       
       setState(() {
@@ -523,7 +523,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
                     filled: true,
                     fillColor: Theme.of(context).colorScheme.surface,
                   ),
-                  items: CurrencySettingsDialog.currencies.map((currency) {
+                  items: Currencies.list.map((currency) {
                     return DropdownMenuItem(
                       value: currency['code'],
                       child: Row(
@@ -700,10 +700,10 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
                     filled: true,
                     fillColor: Theme.of(context).colorScheme.surface,
                   ),
-                  items: categories.map((category) {
+                  items: categories.map<DropdownMenuItem<String>>((category) {
                     final icon = CategoryIcons.getIconForCategory(category.name);
                     final color = CategoryIcons.getColorForCategory(category.name);
-                    return DropdownMenuItem(
+                    return DropdownMenuItem<String>(
                       value: category.id,
                       child: Row(
                         children: [
@@ -1388,7 +1388,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
   }
 
   String _getCurrencySymbol(String currency) {
-    final currencyMap = CurrencySettingsDialog.currencies.firstWhere(
+    final currencyMap = Currencies.list.firstWhere(
       (c) => c['code'] == currency,
       orElse: () => {'code': currency, 'symbol': currency},
     );

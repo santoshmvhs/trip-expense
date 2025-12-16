@@ -5,6 +5,7 @@ import '../../core/models/trip_budget.dart';
 import '../../core/models/trip_budget_allocation.dart';
 import '../../core/providers/budget_providers.dart';
 import '../../core/providers/category_providers.dart';
+import '../../core/models/category.dart' as models;
 import '../../core/supabase/supabase_client.dart';
 import '../../core/utils/category_icons.dart';
 
@@ -482,9 +483,9 @@ class _TripBudgetDialogState extends ConsumerState<TripBudgetDialog> {
                     ),
                     items: [
                       const DropdownMenuItem(value: null, child: Text('None')),
-                      ...categories.map((cat) => DropdownMenuItem(
-                            value: cat.name,
-                            child: Text(cat.name),
+                      ...categories.map<DropdownMenuItem<String>>((cat) => DropdownMenuItem<String>(
+                            value: (cat as models.Category).name,
+                            child: Text((cat as models.Category).name),
                           )),
                     ],
                     onChanged: (value) {
@@ -501,9 +502,9 @@ class _TripBudgetDialogState extends ConsumerState<TripBudgetDialog> {
                     Builder(
                       builder: (context) {
                         final selectedCat = categories.firstWhere(
-                          (c) => c.name == selectedCategory,
+                          (c) => (c as models.Category).name == selectedCategory,
                           orElse: () => throw Exception('Category not found'),
-                        );
+                        ) as models.Category;
                         final subcategories = ref.watch(subcategoriesProvider(selectedCat.id));
                         
                         return DropdownButtonFormField<String>(
@@ -517,9 +518,9 @@ class _TripBudgetDialogState extends ConsumerState<TripBudgetDialog> {
                           ),
                           items: [
                             const DropdownMenuItem(value: null, child: Text('None')),
-                            ...subcategories.map((sub) => DropdownMenuItem(
-                                  value: sub.name,
-                                  child: Text(sub.name),
+                            ...subcategories.map<DropdownMenuItem<String>>((sub) => DropdownMenuItem<String>(
+                                  value: (sub as models.Subcategory).name,
+                                  child: Text((sub as models.Subcategory).name),
                                 )),
                           ],
                               onChanged: (value) {

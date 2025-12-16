@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../repositories/categories_repo.dart';
-import '../models/category.dart';
+import '../models/category.dart' as models;
 
 final categoriesRepoProvider = Provider((_) => CategoriesRepo());
 
@@ -21,15 +21,15 @@ class CategoriesNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>>
         _repo.getAllSubcategories(),
       ]);
       
-      final categories = results[0] as List<Category>;
-      final allSubcategories = results[1] as List<Subcategory>;
+      final categories = results[0] as List<models.Category>;
+      final allSubcategories = results[1] as List<models.Subcategory>;
       
       // Debug: Log what we got
       debugPrint('📦 Categories loaded: ${categories.length}');
       debugPrint('📦 Subcategories loaded: ${allSubcategories.length}');
       
       // Group subcategories by category_id
-      final groupedSubcategories = <String, List<Subcategory>>{};
+      final groupedSubcategories = <String, List<models.Subcategory>>{};
       for (final subcategory in allSubcategories) {
         if (!groupedSubcategories.containsKey(subcategory.categoryId)) {
           groupedSubcategories[subcategory.categoryId] = [];
@@ -58,21 +58,21 @@ final categoriesDataProvider = StateNotifierProvider<CategoriesNotifier, AsyncVa
 });
 
 // Simple provider that just returns categories (from cached data)
-final categoriesProvider = Provider<List<Category>>((ref) {
+final categoriesProvider = Provider<List<models.Category>>((ref) {
   final data = ref.watch(categoriesDataProvider);
   return data.when(
-    data: (map) => map['categories'] as List<Category>,
+    data: (map) => map['categories'] as List<models.Category>,
     loading: () => [],
     error: (_, __) => [],
   );
 });
 
 // Simple provider that returns subcategories for a category (from cached data)
-final subcategoriesProvider = Provider.family<List<Subcategory>, String>((ref, String categoryId) {
+final subcategoriesProvider = Provider.family<List<models.Subcategory>, String>((ref, String categoryId) {
   final data = ref.watch(categoriesDataProvider);
   return data.when(
     data: (map) {
-      final subcategoriesMap = map['subcategoriesMap'] as Map<String, List<Subcategory>>;
+      final subcategoriesMap = map['subcategoriesMap'] as Map<String, List<models.Subcategory>>;
       return subcategoriesMap[categoryId] ?? [];
     },
     loading: () => [],
@@ -80,11 +80,11 @@ final subcategoriesProvider = Provider.family<List<Subcategory>, String>((ref, S
   );
 });
 
-final allSubcategoriesProvider = Provider<List<Subcategory>>((ref) {
+final allSubcategoriesProvider = Provider<List<models.Subcategory>>((ref) {
   final data = ref.watch(categoriesDataProvider);
   return data.when(
     data: (map) {
-      final subcategoriesMap = map['subcategoriesMap'] as Map<String, List<Subcategory>>;
+      final subcategoriesMap = map['subcategoriesMap'] as Map<String, List<models.Subcategory>>;
       return subcategoriesMap.values.expand((list) => list).toList();
     },
     loading: () => [],
@@ -93,12 +93,12 @@ final allSubcategoriesProvider = Provider<List<Subcategory>>((ref) {
 });
 
 // Helper provider to get subcategories by category name (for backward compatibility)
-final subcategoriesByNameProvider = Provider.family<List<Subcategory>, String>((ref, String categoryName) {
+final subcategoriesByNameProvider = Provider.family<List<models.Subcategory>, String>((ref, String categoryName) {
   final data = ref.watch(categoriesDataProvider);
   return data.when(
     data: (map) {
-      final categories = map['categories'] as List<Category>;
-      final subcategoriesMap = map['subcategoriesMap'] as Map<String, List<Subcategory>>;
+      final categories = map['categories'] as List<models.Category>;
+      final subcategoriesMap = map['subcategoriesMap'] as Map<String, List<models.Subcategory>>;
       try {
         final category = categories.firstWhere(
           (c) => c.name == categoryName,
