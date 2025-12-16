@@ -17,6 +17,7 @@ import '../../core/models/expense_split.dart';
 import '../../core/utils/category_icons.dart';
 import 'expense_detail_page.dart';
 import '../groups/group_detail_page.dart'; // For groupProvider
+import '../settings/currency_settings_dialog.dart'; // For currency list
 
 class AddExpensePage extends ConsumerStatefulWidget {
   final String groupId;
@@ -40,6 +41,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
   
   DateTime _selectedDate = DateTime.now();
   String? _selectedPaidBy;
+  String? _selectedCurrency; // Currency for this expense
   final Map<String, bool> _selectedMembers = {};
   String _splitType = 'equal'; // 'equal', 'percentage', 'amount', 'shares'
   final Map<String, TextEditingController> _splitControllers = {};
@@ -120,6 +122,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
       _amountController.text = expense.amount.toStringAsFixed(2);
       _selectedDate = expense.expenseDate;
       _selectedPaidBy = expense.paidBy;
+      _selectedCurrency = expense.currency; // Load expense currency
       // Load category and subcategory by name (backward compatibility)
       _selectedCategoryName = expense.category;
       _selectedSubcategoryName = expense.subcategory;
@@ -325,7 +328,8 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
           totalAmount += splitAmount;
         }
         if ((totalAmount - amount).abs() > 0.01) {
-          throw Exception('Amounts must add up to ₹${amount.toStringAsFixed(2)}');
+          final currencySymbol = _getCurrencySymbol(_selectedCurrency ?? 'INR');
+          throw Exception('Amounts must add up to $currencySymbol${amount.toStringAsFixed(2)}');
         }
         for (final userId in selectedUserIds) {
           splits[userId] = double.parse(_splitControllers[userId]!.text);
@@ -356,9 +360,9 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
       }
     }
 
-      // Get group currency
+      // Get selected currency (default to group currency if not set)
       final group = await ref.read(groupProvider(widget.groupId).future);
-      final groupCurrency = group.currency;
+      final expenseCurrency = _selectedCurrency ?? group.currency;
 
       if (widget.expenseId != null) {
         // Update existing expense
@@ -366,7 +370,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
               expenseId: widget.expenseId!,
               title: _titleController.text.trim(),
               amount: amount,
-              currency: groupCurrency,
+              currency: expenseCurrency,
               paidBy: _selectedPaidBy!,
               expenseDate: _selectedDate,
               notes: _notesController.text.trim().isEmpty
@@ -400,7 +404,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
               groupId: widget.groupId,
               title: _titleController.text.trim(),
               amount: amount,
-              currency: groupCurrency,
+              currency: expenseCurrency,
               paidBy: _selectedPaidBy!,
               expenseDate: _selectedDate,
               notes: _notesController.text.trim().isEmpty
@@ -460,6 +464,18 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
     }
     
     final asyncMembers = ref.watch(groupMembersProvider(widget.groupId));
+    final asyncGroup = ref.watch(groupProvider(widget.groupId));
+
+    // Initialize currency with group currency if not set
+    asyncGroup.whenData((group) {
+      if (_selectedCurrency == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          setState(() {
+            _selectedCurrency = group.currency;
+          });
+        });
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -492,30 +508,106 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
             ),
             const SizedBox(height: 16),
 
-            // Amount
-            TextFormField(
-              controller: _amountController,
-              decoration: InputDecoration(
-                labelText: 'Amount',
-                hintText: '0.00',
-                prefixIcon: const Icon(Icons.currency_rupee),
-                prefixText: '₹ ',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+            // Currency selector
+            asyncGroup.when(
+              data: (group) {
+                final currentCurrency = _selectedCurrency ?? group.currency;
+                return DropdownButtonFormField<String>(
+                  value: currentCurrency,
+                  decoration: InputDecoration(
+                    labelText: 'Currency',
+                    prefixIcon: const Icon(Icons.currency_exchange),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surface,
+                  ),
+                  items: CurrencySettingsDialog.currencies.map((currency) {
+                    return DropdownMenuItem(
+                      value: currency['code'],
+                      child: Row(
+                        children: [
+                          Text('${currency['symbol']} '),
+                          Text('${currency['code']} - ${currency['name']}'),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCurrency = value;
+                    });
+                  },
+                );
+              },
+              loading: () => DropdownButtonFormField<String>(
+                value: null,
+                decoration: InputDecoration(
+                  labelText: 'Currency',
+                  hintText: 'Loading...',
+                  prefixIcon: const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surface,
                 ),
-                filled: true,
-                fillColor: Theme.of(context).colorScheme.surface,
+                items: const [],
+                onChanged: (_) {},
               ),
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter an amount';
-                }
-                final amount = double.tryParse(value);
-                if (amount == null || amount <= 0) {
-                  return 'Please enter a valid amount';
-                }
-                return null;
+              error: (_, __) => DropdownButtonFormField<String>(
+                value: null,
+                decoration: InputDecoration(
+                  labelText: 'Currency',
+                  hintText: 'Error loading',
+                  prefixIcon: const Icon(Icons.error_outline, color: Colors.red),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surface,
+                ),
+                items: const [],
+                onChanged: (_) {},
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Amount
+            Builder(
+              builder: (context) {
+                final currentCurrency = _selectedCurrency ?? 'INR';
+                final currencySymbol = _getCurrencySymbol(currentCurrency);
+                return TextFormField(
+                  controller: _amountController,
+                  decoration: InputDecoration(
+                    labelText: 'Amount',
+                    hintText: '0.00',
+                    prefixIcon: Icon(_getCurrencyIcon(currentCurrency)),
+                    prefixText: '$currencySymbol ',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surface,
+                  ),
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter an amount';
+                    }
+                    final amount = double.tryParse(value);
+                    if (amount == null || amount <= 0) {
+                      return 'Please enter a valid amount';
+                    }
+                    return null;
+                  },
+                );
               },
             ),
             const SizedBox(height: 16),
@@ -885,7 +977,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
                                           labelText: _splitType == 'percentage'
                                               ? 'Percentage (%)'
                                               : _splitType == 'amount'
-                                                  ? 'Amount (₹)'
+                                                  ? 'Amount (${_getCurrencySymbol(_selectedCurrency ?? 'INR')})'
                                                   : 'Shares',
                                           hintText: _splitType == 'percentage'
                                               ? '0'
@@ -951,7 +1043,8 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
                                 preview[id] = amt;
                               }
                               if ((total - amount).abs() > 0.01) {
-                                errorMessage = 'Total: ₹${total.toStringAsFixed(2)} (should be ₹${amount.toStringAsFixed(2)})';
+                                final currencySymbol = _getCurrencySymbol(_selectedCurrency ?? 'INR');
+                                errorMessage = 'Total: $currencySymbol${total.toStringAsFixed(2)} (should be $currencySymbol${amount.toStringAsFixed(2)})';
                               }
                               break;
                             case 'shares':
@@ -1292,6 +1385,32 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
         ),
       ),
     );
+  }
+
+  String _getCurrencySymbol(String currency) {
+    final currencyMap = CurrencySettingsDialog.currencies.firstWhere(
+      (c) => c['code'] == currency,
+      orElse: () => {'code': currency, 'symbol': currency},
+    );
+    return currencyMap['symbol'] ?? currency;
+  }
+
+  IconData _getCurrencyIcon(String currency) {
+    // Return appropriate icon based on currency
+    switch (currency) {
+      case 'USD':
+        return Icons.attach_money;
+      case 'EUR':
+        return Icons.euro;
+      case 'GBP':
+        return Icons.currency_pound;
+      case 'INR':
+        return Icons.currency_rupee;
+      case 'JPY':
+        return Icons.currency_yen;
+      default:
+        return Icons.currency_exchange;
+    }
   }
 }
 
