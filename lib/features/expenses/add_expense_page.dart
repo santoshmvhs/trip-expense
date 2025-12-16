@@ -16,6 +16,7 @@ import '../../core/models/category.dart';
 import '../../core/models/expense_split.dart';
 import '../../core/utils/category_icons.dart';
 import 'expense_detail_page.dart';
+import '../groups/group_detail_page.dart'; // For groupProvider
 
 class AddExpensePage extends ConsumerStatefulWidget {
   final String groupId;
@@ -355,13 +356,17 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
       }
     }
 
+      // Get group currency
+      final group = await ref.read(groupProvider(widget.groupId).future);
+      final groupCurrency = group.currency;
+
       if (widget.expenseId != null) {
         // Update existing expense
         await ref.read(expensesRepoProvider).updateExpense(
               expenseId: widget.expenseId!,
               title: _titleController.text.trim(),
               amount: amount,
-              currency: 'INR', // TODO: Get from group
+              currency: groupCurrency,
               paidBy: _selectedPaidBy!,
               expenseDate: _selectedDate,
               notes: _notesController.text.trim().isEmpty
@@ -395,7 +400,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
               groupId: widget.groupId,
               title: _titleController.text.trim(),
               amount: amount,
-              currency: 'INR', // TODO: Get from group
+              currency: groupCurrency,
               paidBy: _selectedPaidBy!,
               expenseDate: _selectedDate,
               notes: _notesController.text.trim().isEmpty
