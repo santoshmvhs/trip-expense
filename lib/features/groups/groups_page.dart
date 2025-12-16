@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/repositories/groups_repo.dart';
 import '../../core/providers/expense_providers.dart';
 import '../../core/models/group.dart';
+import '../../core/constants/currencies.dart';
 
 final groupsRepoProvider = Provider((_) => GroupsRepo());
 final groupsProvider = FutureProvider((ref) => ref.watch(groupsRepoProvider).listMyGroups());
@@ -126,7 +127,8 @@ class GroupsPage extends ConsumerWidget {
     final nameController = TextEditingController();
     String selectedCurrency = 'INR';
     
-    final currencies = ['USD', 'EUR', 'GBP', 'INR', 'JPY', 'CAD', 'AUD'];
+    // Use the full currency list from Currencies class
+    final currencies = Currencies.list;
     
     final created = await showDialog<bool>(
       context: context,
@@ -145,10 +147,15 @@ class GroupsPage extends ConsumerWidget {
               DropdownButtonFormField<String>(
                 value: selectedCurrency,
                 decoration: const InputDecoration(labelText: 'Currency'),
-                items: currencies.map((currency) {
-                  return DropdownMenuItem(
-                    value: currency,
-                    child: Text(currency),
+                items: currencies.map<DropdownMenuItem<String>>((currency) {
+                  return DropdownMenuItem<String>(
+                    value: currency['code'],
+                    child: Row(
+                      children: [
+                        Text('${currency['symbol']} '),
+                        Text('${currency['code']} - ${currency['name']}'),
+                      ],
+                    ),
                   );
                 }).toList(),
                 onChanged: (value) {

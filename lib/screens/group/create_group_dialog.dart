@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/group_provider.dart';
+import '../../core/constants/currencies.dart';
 
 class CreateGroupDialog extends StatefulWidget {
   const CreateGroupDialog({super.key});
@@ -13,9 +14,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  String _selectedCurrency = 'USD';
-
-  final List<String> _currencies = ['USD', 'EUR', 'GBP', 'INR', 'JPY', 'CAD', 'AUD'];
+  String _selectedCurrency = 'INR';
 
   @override
   void dispose() {
@@ -96,10 +95,15 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                   labelText: 'Currency',
                   prefixIcon: Icon(Icons.attach_money),
                 ),
-                items: _currencies.map((currency) {
-                  return DropdownMenuItem(
-                    value: currency,
-                    child: Text(currency),
+                items: Currencies.list.map<DropdownMenuItem<String>>((currency) {
+                  return DropdownMenuItem<String>(
+                    value: currency['code'],
+                    child: Row(
+                      children: [
+                        Text('${currency['symbol']} '),
+                        Text('${currency['code']} - ${currency['name']}'),
+                      ],
+                    ),
                   );
                 }).toList(),
                 onChanged: (value) {
