@@ -7,6 +7,7 @@ import '../../core/providers/expense_providers.dart';
 import '../../core/models/group.dart';
 import '../../core/constants/currencies.dart';
 import '../../core/supabase/supabase_client.dart' show currentUser;
+import 'settle_page.dart' show groupBalancesProvider;
 
 class RecordPaymentDialog extends ConsumerStatefulWidget {
   final String groupId;
