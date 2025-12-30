@@ -10,7 +10,9 @@ import '../../core/models/expense.dart';
 import '../../core/models/expense_split.dart';
 import '../../core/models/settlement.dart';
 import '../../core/models/group.dart';
+import '../../core/constants/currencies.dart';
 import 'settle_math.dart';
+import 'record_payment_dialog.dart';
 
 final groupsRepoProvider = Provider((_) => GroupsRepo());
 
@@ -21,6 +23,7 @@ final groupProvider = FutureProvider.family((ref, String groupId) {
 final groupBalancesProvider = FutureProvider.family((ref, String groupId) async {
   final expenses = await ref.watch(groupExpensesProvider(groupId).future);
   final members = await ref.watch(groupMembersProvider(groupId).future);
+  final settlementsRepo = ref.watch(settlementsRepoProvider);
   
   // Calculate balances
   final balances = <String, double>{}; // userId -> balance (positive = owed, negative = owes)
@@ -52,6 +55,14 @@ final groupBalancesProvider = FutureProvider.family((ref, String groupId) async 
     for (final split in splits) {
       balances[split.userId] = (balances[split.userId] ?? 0) - split.share;
     }
+  }
+  
+  // Account for settlements (payments made)
+  final settlements = await settlementsRepo.listGroupSettlements(groupId);
+  for (final settlement in settlements) {
+    // From user paid to user (reduces from_user's balance, increases to_user's balance)
+    balances[settlement.fromUser] = (balances[settlement.fromUser] ?? 0) - settlement.amount;
+    balances[settlement.toUser] = (balances[settlement.toUser] ?? 0) + settlement.amount;
   }
   
   // Get member names
@@ -259,20 +270,7 @@ class SettlePage extends ConsumerWidget {
   }
 
   String _getCurrencySymbol(String currency) {
-    switch (currency) {
-      case 'USD':
-        return '\$';
-      case 'EUR':
-        return '€';
-      case 'GBP':
-        return '£';
-      case 'INR':
-        return '₹';
-      case 'JPY':
-        return '¥';
-      default:
-        return currency;
-    }
+    return Currencies.getSymbol(currency);
   }
 
   void _showRecordPaymentDialog(
@@ -281,18 +279,12 @@ class SettlePage extends ConsumerWidget {
     Group group,
     List<Map<String, dynamic>> balances,
   ) {
-    // TODO: Implement payment recording
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Record Payment'),
-        content: const Text('Payment recording feature coming soon!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
+      builder: (context) => RecordPaymentDialog(
+        groupId: groupId,
+        group: group,
+        balances: balances,
       ),
     );
   }

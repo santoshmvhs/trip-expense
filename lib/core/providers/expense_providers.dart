@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import '../repositories/expenses_repo.dart';
+import '../repositories/settlements_repo.dart';
 import '../supabase/supabase_client.dart';
 
 final expensesRepoProvider = Provider((_) => ExpensesRepo());
+final settlementsRepoProvider = Provider((_) => SettlementsRepo());
 
 final groupExpensesProvider = FutureProvider.family((ref, String groupId) {
   return ref.watch(expensesRepoProvider).listGroupExpenses(groupId);
