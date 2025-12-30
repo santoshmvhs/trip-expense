@@ -26,7 +26,7 @@ class App extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'Trip Expense',
+      title: 'MOMENTRA',
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,

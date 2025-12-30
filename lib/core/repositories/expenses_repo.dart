@@ -62,6 +62,7 @@ class ExpensesRepo {
     String? recurringFrequency,
     DateTime? recurringEndDate,
     required Map<String, double> splitsByUserId, // userId -> share amount
+    String? momentId, // Optional: link to moment
   }) async {
     final uid = currentUser()!.id;
 
@@ -85,6 +86,8 @@ class ExpensesRepo {
           'recurring_frequency': recurringFrequency,
         if (recurringEndDate != null) 
           'recurring_end_date': recurringEndDate.toIso8601String(),
+        // Moment link
+        if (momentId != null && momentId.isNotEmpty) 'moment_id': momentId,
       };
 
       final inserted = await supabase()

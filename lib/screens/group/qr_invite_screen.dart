@@ -66,8 +66,8 @@ class _QrInviteScreenState extends ConsumerState<QrInviteScreen> {
         // For web, share the QR data as text with instructions
         if (!mounted) return;
         await Share.share(
-          'Join my expense group "$groupName" on Trip Expense!\n\nQR Code Data:\n$qrData\n\nOr scan the QR code shown in the app.',
-          subject: 'Join ${groupName} on Trip Expense',
+          'Join my expense group "$groupName" on MOMENTRA!\n\nQR Code Data:\n$qrData\n\nOr scan the QR code shown in the app.',
+          subject: 'Join ${groupName} on MOMENTRA',
         );
       } else {
         // Mobile platforms: Save to file and share
@@ -79,8 +79,8 @@ class _QrInviteScreenState extends ConsumerState<QrInviteScreen> {
         if (!mounted) return;
         await Share.shareXFiles(
           [XFile(file.path)],
-          subject: 'Join ${groupName} on Trip Expense',
-          text: 'Scan this QR code to join my expense group "${groupName}" on Trip Expense!',
+          subject: 'Join ${groupName} on MOMENTRA',
+          text: 'Scan this QR code to join my expense group "${groupName}" on MOMENTRA!',
         );
       }
     } catch (e) {

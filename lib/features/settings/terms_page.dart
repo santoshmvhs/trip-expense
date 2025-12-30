@@ -29,15 +29,15 @@ class TermsPage extends StatelessWidget {
             _buildSection(
               context,
               '1. Acceptance of Terms',
-              'By accessing and using Trip Expense, you accept and agree to be bound by the terms and provision of this agreement.',
+              'By accessing and using MOMENTRA, you accept and agree to be bound by the terms and provision of this agreement.',
             ),
             _buildSection(
               context,
               '2. Use License',
-              'Permission is granted to temporarily use Trip Expense for personal, non-commercial purposes. This is the grant of a license, not a transfer of title, and under this license you may not:\n\n'
+              'Permission is granted to temporarily use MOMENTRA for personal, non-commercial purposes. This is the grant of a license, not a transfer of title, and under this license you may not:\n\n'
               '• Modify or copy the materials\n'
               '• Use the materials for any commercial purpose\n'
-              '• Attempt to reverse engineer any software contained in Trip Expense',
+              '• Attempt to reverse engineer any software contained in MOMENTRA',
             ),
             _buildSection(
               context,
@@ -52,7 +52,7 @@ class TermsPage extends StatelessWidget {
             _buildSection(
               context,
               '5. Limitation of Liability',
-              'Trip Expense shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use or inability to use the service.',
+              'MOMENTRA shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use or inability to use the service.',
             ),
             _buildSection(
               context,

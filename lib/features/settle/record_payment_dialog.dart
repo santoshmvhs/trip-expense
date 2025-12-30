@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/repositories/settlements_repo.dart';
 import '../../core/providers/expense_providers.dart';
+import '../../core/providers/expense_with_splits_provider.dart';
 import '../../core/models/group.dart';
 import '../../core/constants/currencies.dart';
 import '../../core/supabase/supabase_client.dart' show currentUser;
@@ -13,12 +14,18 @@ class RecordPaymentDialog extends ConsumerStatefulWidget {
   final String groupId;
   final Group group;
   final List<Map<String, dynamic>> balances;
+  final String? initialPayerId;
+  final String? initialPayeeId;
+  final double? initialAmount;
 
   const RecordPaymentDialog({
     super.key,
     required this.groupId,
     required this.group,
     required this.balances,
+    this.initialPayerId,
+    this.initialPayeeId,
+    this.initialAmount,
   });
 
   @override
@@ -44,6 +51,23 @@ class _RecordPaymentDialogState extends ConsumerState<RecordPaymentDialog> {
     'PayPal',
     'Other',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill values if provided and they exist in balances
+    final userIds = widget.balances.map((b) => b['userId'] as String).toSet();
+    
+    if (widget.initialPayerId != null && userIds.contains(widget.initialPayerId)) {
+      _selectedPayerId = widget.initialPayerId;
+    }
+    if (widget.initialPayeeId != null && userIds.contains(widget.initialPayeeId)) {
+      _selectedPayeeId = widget.initialPayeeId;
+    }
+    if (widget.initialAmount != null) {
+      _amountController.text = widget.initialAmount!.toStringAsFixed(2);
+    }
+  }
 
   @override
   void dispose() {
@@ -100,8 +124,10 @@ class _RecordPaymentDialogState extends ConsumerState<RecordPaymentDialog> {
             : _notesController.text.trim(),
       );
 
-      // Invalidate balances to refresh
+      // Invalidate balances and expenses to refresh all views
       ref.invalidate(groupBalancesProvider(widget.groupId));
+      // Also invalidate expenses with splits so analysis tab refreshes
+      ref.invalidate(groupExpensesWithSplitsProvider(widget.groupId));
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -145,7 +171,9 @@ class _RecordPaymentDialogState extends ConsumerState<RecordPaymentDialog> {
             children: [
               // Payer dropdown
               DropdownButtonFormField<String>(
-                value: _selectedPayerId,
+                value: _selectedPayerId != null && widget.balances.any((b) => b['userId'] == _selectedPayerId)
+                    ? _selectedPayerId
+                    : null,
                 decoration: const InputDecoration(
                   labelText: 'Paid by',
                   prefixIcon: Icon(Icons.person_outline),
@@ -194,7 +222,9 @@ class _RecordPaymentDialogState extends ConsumerState<RecordPaymentDialog> {
               
               // Payee dropdown
               DropdownButtonFormField<String>(
-                value: _selectedPayeeId,
+                value: _selectedPayeeId != null && widget.balances.any((b) => b['userId'] == _selectedPayeeId && b['userId'] != _selectedPayerId)
+                    ? _selectedPayeeId
+                    : null,
                 decoration: const InputDecoration(
                   labelText: 'Paid to',
                   prefixIcon: Icon(Icons.person),

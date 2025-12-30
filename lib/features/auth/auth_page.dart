@@ -177,7 +177,16 @@ class _AuthPageState extends State<AuthPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 32),
+                // Momentra Logo
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32.0),
+                  child: Image.asset(
+                    'assets/images/momentra.png',
+                    height: 150,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Text(
                   _isSignUp ? 'Create Account' : 'Welcome Back',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(

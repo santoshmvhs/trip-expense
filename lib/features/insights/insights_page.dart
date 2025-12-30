@@ -6,8 +6,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/repositories/groups_repo.dart';
 import '../../core/providers/expense_providers.dart';
+import '../../core/providers/moment_providers.dart';
 import '../../core/models/expense.dart';
 import '../../core/models/group.dart';
+import '../../core/models/moment.dart';
+import '../../widgets/moment_health_badge.dart';
+import '../../theme/app_theme.dart';
 
 final groupsRepoProvider = Provider((_) => GroupsRepo());
 final groupsProvider = FutureProvider((ref) => ref.watch(groupsRepoProvider).listMyGroups());
@@ -32,6 +36,7 @@ class InsightsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncExpenses = ref.watch(allExpensesProvider);
     final asyncGroups = ref.watch(groupsProvider);
+    final asyncMoments = ref.watch(momentsProvider(null)); // All moments
 
     return Scaffold(
       appBar: AppBar(
@@ -95,6 +100,13 @@ class InsightsPage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Moments Section
+                asyncMoments.when(
+                  data: (moments) => _buildMomentsSection(context, ref, moments),
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
+                const SizedBox(height: 16),
                 // Summary Cards
                 Row(
                   children: [

@@ -58,11 +58,21 @@ final groupBalancesProvider = FutureProvider.family((ref, String groupId) async 
   }
   
   // Account for settlements (payments made)
+  // Settlements REDUCE outstanding balances, not add to them
   final settlements = await settlementsRepo.listGroupSettlements(groupId);
   for (final settlement in settlements) {
-    // From user paid to user (reduces from_user's balance, increases to_user's balance)
-    balances[settlement.fromUser] = (balances[settlement.fromUser] ?? 0) - settlement.amount;
-    balances[settlement.toUser] = (balances[settlement.toUser] ?? 0) + settlement.amount;
+    // When fromUser pays toUser:
+    // - fromUser's balance increases (becomes less negative if they owe, or more positive if they're owed)
+    // - toUser's balance decreases (becomes less positive if they're owed, or more negative if they owe)
+    // This effectively reduces the debt between them
+    
+    // If fromUser owes money (negative balance), paying reduces what they owe (balance becomes less negative)
+    // If fromUser is owed money (positive balance), paying reduces what they're owed (balance becomes less positive)
+    balances[settlement.fromUser] = (balances[settlement.fromUser] ?? 0) + settlement.amount;
+    
+    // If toUser is owed money (positive balance), receiving payment reduces what they're owed (balance becomes less positive)
+    // If toUser owes money (negative balance), receiving payment increases what they owe (balance becomes more negative)
+    balances[settlement.toUser] = (balances[settlement.toUser] ?? 0) - settlement.amount;
   }
   
   // Get member names

@@ -39,7 +39,7 @@ class CsvExportService {
       await Share.shareXFiles(
         [XFile(file.path)],
         subject: 'Expense Report - ${group.name}',
-        text: 'Expense report exported from SettleUp',
+        text: 'Expense report exported from MOMENTRA',
       );
     } catch (e) {
       rethrow;

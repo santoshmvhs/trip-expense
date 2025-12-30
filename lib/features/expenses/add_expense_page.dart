@@ -7,13 +7,16 @@ import 'dart:io';
 
 import '../../core/repositories/expenses_repo.dart';
 import '../../core/repositories/groups_repo.dart';
+import '../../core/repositories/moments_repo.dart';
 import '../../core/supabase/supabase_client.dart';
 import '../../core/providers/expense_providers.dart';
 import '../../core/providers/expense_with_splits_provider.dart';
 import '../../core/providers/category_providers.dart';
 import '../../core/providers/activity_providers.dart';
+import '../../core/providers/moment_providers.dart';
 import '../../core/models/category.dart' as models;
 import '../../core/models/expense_split.dart';
+import '../../core/models/moment.dart';
 import '../../core/utils/category_icons.dart';
 import 'expense_detail_page.dart';
 import '../groups/group_detail_page.dart'; // For groupProvider
@@ -42,6 +45,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
   DateTime _selectedDate = DateTime.now();
   String? _selectedPaidBy;
   String? _selectedCurrency; // Currency for this expense
+  String? _selectedMomentId; // Optional: link to moment
   final Map<String, bool> _selectedMembers = {};
   String _splitType = 'equal'; // 'equal', 'percentage', 'amount', 'shares'
   final Map<String, TextEditingController> _splitControllers = {};
@@ -62,17 +66,11 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
   @override
   void initState() {
     super.initState();
-    // Listen for categories to load so we can resolve IDs in edit mode
-    ref.listen<AsyncValue<Map<String, dynamic>>>(
-      categoriesDataProvider,
-      (prev, next) {
-        if (prev?.isLoading == true && next.hasValue) {
-          _resolveCategoryIdsFromNames();
-        }
-      },
-    );
     if (widget.expenseId != null) {
-      _loadExpenseForEdit();
+      // Load expense data after first frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadExpenseForEdit();
+      });
     }
   }
 
@@ -400,7 +398,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
         }
       } else {
         // Create new expense
-        await ref.read(expensesRepoProvider).createExpense(
+        final createdExpense = await ref.read(expensesRepoProvider).createExpense(
               groupId: widget.groupId,
               title: _titleController.text.trim(),
               amount: amount,
@@ -417,7 +415,28 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
               recurringFrequency: _recurringFrequency,
               recurringEndDate: _recurringEndDate,
               splitsByUserId: splits,
+              momentId: _selectedMomentId,
             );
+        
+        // Auto-create contribution if linked to moment
+        if (_selectedMomentId != null && _selectedMomentId!.isNotEmpty) {
+          try {
+            final user = currentUser();
+            final participantId = user?.id.toString() ?? user?.email ?? 'unknown';
+            await ref.read(momentsRepoProvider).addContribution(
+              momentId: _selectedMomentId!,
+              participantId: participantId,
+              amount: amount,
+              note: 'From expense: ${_titleController.text.trim()}',
+              expenseId: createdExpense.id,
+            );
+            // Invalidate moment providers to refresh
+            ref.invalidate(momentsProvider(widget.groupId));
+            ref.invalidate(momentProvider(_selectedMomentId!));
+          } catch (e) {
+            debugPrint('Note: Could not auto-create contribution: $e');
+          }
+        }
 
         if (mounted) {
           // Invalidate providers to refresh the list
@@ -452,6 +471,19 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
   @override
   Widget build(BuildContext context) {
     // Categories are now loaded immediately via StateNotifier - no pre-fetch needed
+    
+    // Listen for categories to load so we can resolve IDs in edit mode
+    // This must be in build method, not initState (Riverpod requirement)
+    if (widget.expenseId != null) {
+      ref.listen<AsyncValue<Map<String, dynamic>>>(
+        categoriesDataProvider,
+        (prev, next) {
+          if (prev?.isLoading == true && next.hasValue) {
+            _resolveCategoryIdsFromNames();
+          }
+        },
+      );
+    }
     
     // Invalidate members provider on first build to ensure fresh data
     if (!_hasInvalidatedMembers) {
@@ -527,9 +559,12 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
                     return DropdownMenuItem(
                       value: currency['code'],
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text('${currency['symbol']} '),
-                          Text('${currency['code']} - ${currency['name']}'),
+                          Flexible(
+                            child: Text('${currency['code']} - ${currency['name']}'),
+                          ),
                         ],
                       ),
                     );
@@ -609,6 +644,47 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
                   },
                 );
               },
+            ),
+            const SizedBox(height: 16),
+
+            // Link to Moment (optional)
+            ref.watch(momentsProvider(widget.groupId)).when(
+              data: (moments) {
+                final activeMoments = moments.where((m) => m.lifecycleState != 'COMPLETED').toList();
+                if (activeMoments.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return DropdownButtonFormField<String>(
+                  value: _selectedMomentId,
+                  decoration: InputDecoration(
+                    labelText: 'Link to Moment (optional)',
+                    hintText: 'Select a moment',
+                    prefixIcon: const Icon(Icons.flag_outlined),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surface,
+                  ),
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      child: Text('None'),
+                    ),
+                    ...activeMoments.map((moment) => DropdownMenuItem<String>(
+                      value: moment.id,
+                      child: Text(moment.title),
+                    )),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedMomentId = value;
+                    });
+                  },
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
             ),
             const SizedBox(height: 16),
 
@@ -766,10 +842,11 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
                       return DropdownMenuItem(
                         value: subcategory.id,
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(icon, color: categoryColor, size: 20),
                             const SizedBox(width: 12),
-                            Expanded(child: Text(subcategory.name)),
+                            Flexible(child: Text(subcategory.name)),
                           ],
                         ),
                       );
@@ -849,6 +926,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
                     return DropdownMenuItem(
                       value: userId,
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           CircleAvatar(
                             radius: 12,
@@ -867,10 +945,13 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          Expanded(
+                          Flexible(
                             child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(name),
+                                Flexible(
+                                  child: Text(name),
+                                ),
                                 if (isCurrentUser) ...[
                                   const SizedBox(width: 8),
                                   Text(
@@ -1390,7 +1471,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
   String _getCurrencySymbol(String currency) {
     final currencyMap = Currencies.list.firstWhere(
       (c) => c['code'] == currency,
-      orElse: () => {'code': currency, 'symbol': currency},
+      orElse: () => <String, String>{'code': currency, 'symbol': currency},
     );
     return currencyMap['symbol'] ?? currency;
   }

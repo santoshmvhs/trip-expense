@@ -19,6 +19,12 @@ import '../../core/utils/category_icons.dart';
 import 'invite_member_dialog.dart';
 import 'groups_page.dart'; // Import to access groupsProvider
 import '../budgets/budgets_tab.dart';
+import '../settle/record_payment_dialog.dart';
+import '../moments/moments_tab.dart';
+import '../moments/create_moment_dialog.dart';
+import '../../core/providers/expense_providers.dart' show settlementsRepoProvider;
+import '../../core/repositories/settlements_repo.dart';
+import '../../core/supabase/supabase_client.dart' show currentUser;
 
 final groupsRepoProvider = Provider((_) => GroupsRepo());
 
@@ -43,7 +49,7 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this); // Added Moments tab
   }
 
   @override
@@ -70,6 +76,7 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
             Tab(icon: Icon(Icons.receipt_long), text: 'Expenses'),
             Tab(icon: Icon(Icons.analytics_outlined), text: 'Analysis'),
             Tab(icon: Icon(Icons.account_balance_wallet), text: 'Budgets'),
+            Tab(icon: Icon(Icons.flag_rounded), text: 'Moments'),
             Tab(icon: Icon(Icons.timeline), text: 'Timeline'),
           ],
         ),
@@ -245,14 +252,26 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
       ),
       floatingActionButton: _tabController.index == 0
           ? FloatingActionButton.extended(
-              heroTag: 'add_expense_fab_${widget.groupId}', // Unique hero tag per group
+              heroTag: 'add_expense_fab_${widget.groupId}',
               onPressed: () {
                 context.push('/shell/group/${widget.groupId}/add-expense');
               },
               icon: const Icon(Icons.add),
               label: const Text('Add Expense'),
             )
-          : null,
+          : _tabController.index == 3 // Moments tab
+              ? FloatingActionButton.extended(
+                  heroTag: 'add_moment_fab_${widget.groupId}',
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => CreateMomentDialog(groupId: widget.groupId),
+                    );
+                  },
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Create Moment'),
+                )
+              : null,
       body: TabBarView(
         controller: _tabController,
         children: [
@@ -270,6 +289,8 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (_, __) => const Center(child: Text('Error loading group')),
           ),
+          // Moments Tab
+          MomentsTab(groupId: widget.groupId),
           // Timeline Tab
           _buildTimelineTab(context, ref),
         ],
@@ -1764,7 +1785,15 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
                   return const Center(child: CircularProgressIndicator());
                 }
                 final memberMap = memberMapSnapshot.data!;
-                return _buildBalancesWidget(context, expensesWithSplits, memberMap, group);
+                return FutureBuilder<Widget>(
+                  future: _buildBalancesWidget(context, ref, expensesWithSplits, memberMap, group),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    return snapshot.data!;
+                  },
+                );
               },
             );
           },
@@ -1826,14 +1855,19 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
     return memberMap;
   }
 
-  Widget _buildBalancesWidget(
+  Future<Widget> _buildBalancesWidget(
     BuildContext context,
+    WidgetRef ref,
     List expensesWithSplits,
     Map<String, String> memberMap,
     Group group,
-  ) {
+  ) async {
     // Calculate balances: positive = owed to them, negative = they owe
     final balances = <String, double>{};
+    
+    // Account for settlements (payments made) - need to fetch them
+    final settlementsRepo = ref.read(settlementsRepoProvider);
+    final settlements = await settlementsRepo.listGroupSettlements(widget.groupId);
 
     // Process each expense with splits
     for (final expenseWithSplits in expensesWithSplits) {
@@ -1853,6 +1887,13 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
         }
         balances[split.userId] = (balances[split.userId] ?? 0) - split.share;
       }
+    }
+    
+    // Account for settlements (payments made) - reduce outstanding balances
+    for (final settlement in settlements) {
+      // When fromUser pays toUser, it reduces the debt
+      balances[settlement.fromUser] = (balances[settlement.fromUser] ?? 0) + settlement.amount;
+      balances[settlement.toUser] = (balances[settlement.toUser] ?? 0) - settlement.amount;
     }
 
     // Separate into who owes (negative) and who is owed (positive)
@@ -1920,46 +1961,61 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
                       ...whoIsOwed.map((member) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: Colors.green[100],
-                                child: Text(
-                                  (member['name'] as String)[0].toUpperCase(),
-                                  style: TextStyle(
-                                    color: Colors.green[900],
-                                    fontWeight: FontWeight.bold,
+                          child: InkWell(
+                            onTap: () => _showQuickSettleDialog(
+                              context,
+                              ref,
+                              group,
+                              member['userId'] as String,
+                              member['name'] as String,
+                              member['balance'] as double,
+                              true, // isOwed
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: Colors.green[100],
+                                    child: Text(
+                                      (member['name'] as String)[0].toUpperCase(),
+                                      style: TextStyle(
+                                        color: Colors.green[900],
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      member['name'] as String,
-                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                            fontWeight: FontWeight.w500,
-                                          ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          member['name'] as String,
+                                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                        ),
+                                        Text(
+                                          'Should receive • Tap to settle',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                color: Colors.grey[600],
+                                              ),
+                                        ),
+                                      ],
                                     ),
-                                    Text(
-                                      'Should receive',
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                            color: Colors.grey[600],
-                                          ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                  Text(
+                                    _formatCurrency(member['balance'] as double, group.currency),
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green[700],
+                                        ),
+                                  ),
+                                ],
                               ),
-                              Text(
-                                _formatCurrency(member['balance'] as double, group.currency),
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green[700],
-                                    ),
-                              ),
-                            ],
+                            ),
                           ),
                         );
                       }),
@@ -1979,46 +2035,61 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
                       ...whoOwes.map((member) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: Colors.red[100],
-                                child: Text(
-                                  (member['name'] as String)[0].toUpperCase(),
-                                  style: TextStyle(
-                                    color: Colors.red[900],
-                                    fontWeight: FontWeight.bold,
+                          child: InkWell(
+                            onTap: () => _showQuickSettleDialog(
+                              context,
+                              ref,
+                              group,
+                              member['userId'] as String,
+                              member['name'] as String,
+                              member['balance'] as double,
+                              false, // isOwed (they owe)
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: Colors.red[100],
+                                    child: Text(
+                                      (member['name'] as String)[0].toUpperCase(),
+                                      style: TextStyle(
+                                        color: Colors.red[900],
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      member['name'] as String,
-                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                            fontWeight: FontWeight.w500,
-                                          ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          member['name'] as String,
+                                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                        ),
+                                        Text(
+                                          'Should pay • Tap to settle',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                color: Colors.grey[600],
+                                              ),
+                                        ),
+                                      ],
                                     ),
-                                    Text(
-                                      'Should pay',
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                            color: Colors.grey[600],
-                                          ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                  Text(
+                                    _formatCurrency(member['balance'] as double, group.currency),
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red[700],
+                                        ),
+                                  ),
+                                ],
                               ),
-                              Text(
-                                _formatCurrency(member['balance'] as double, group.currency),
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.red[700],
-                                    ),
-                              ),
-                            ],
+                            ),
                           ),
                         );
                       }),
@@ -2422,6 +2493,57 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
         ),
       ),
     );
+  }
+
+  void _showQuickSettleDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Group group,
+    String otherUserId,
+    String otherUserName,
+    double balanceAmount,
+    bool isOwed, // true if other user is owed, false if other user owes
+  ) {
+    final currentUserId = currentUser()?.id;
+    if (currentUserId == null) return;
+    
+    // Determine payer and payee based on who is owed
+    String? payerId;
+    String? payeeId;
+    
+    if (isOwed) {
+      // Other user is owed money, so current user should pay them
+      payerId = currentUserId;
+      payeeId = otherUserId;
+    } else {
+      // Other user owes money, so they should pay current user
+      payerId = otherUserId;
+      payeeId = currentUserId;
+    }
+    
+    // Get all group members for the dialog
+    final asyncMembers = ref.read(groupMembersProvider(widget.groupId));
+    
+    asyncMembers.whenData((members) {
+      // Create a balances list for the dialog
+      final balances = members.map((m) => {
+        'userId': m['user_id'] as String,
+        'name': m['name'] as String,
+        'balance': 0.0, // Not used in quick settle
+      }).toList();
+      
+      showDialog(
+        context: context,
+        builder: (context) => RecordPaymentDialog(
+          groupId: widget.groupId,
+          group: group,
+          balances: balances,
+          initialPayerId: payerId,
+          initialPayeeId: payeeId,
+          initialAmount: balanceAmount,
+        ),
+      );
+    });
   }
 
   String _formatCurrency(double amount, String currency) {

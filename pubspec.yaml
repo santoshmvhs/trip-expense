@@ -1,5 +1,5 @@
 name: trip
-description: "Trip Expense - Track and split trip expenses with friends"
+description: "MOMENTRA - Track and split trip expenses with friends"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -143,23 +143,32 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/1.png"
+  image_path: "assets/images/momentra.png"
   # Remove alpha channel for iOS (required for App Store)
   remove_alpha_ios: true
   # Adaptive icon settings for Android
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/1.png"
+  adaptive_icon_background: "#000000"  # Black background to match logo
+  adaptive_icon_foreground: "assets/images/momentra.png"
+  # Web icons
+  web:
+    generate: true
+    image_path: "assets/images/momentra.png"
+    background_color: "#000000"
+  # macOS icons
+  macos:
+    generate: true
+    image_path: "assets/images/momentra.png"
 
 # Splash Screen Configuration
 flutter_native_splash:
-  color: "#000000"  # Black background to match your image
-  image: "assets/images/1.png"
+  color: "#000000"  # Black background to match logo
+  image: "assets/images/momentra.png"
   android: true
   ios: true
-  web: false  # Disabled for web
+  web: true  # Enable for web
   # Android 12+ splash screen configuration
   android_12:
-    image: "assets/images/1.png"
+    image: "assets/images/momentra.png"
     color: "#000000"
   # Full screen mode
   fullscreen: true

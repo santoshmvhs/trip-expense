@@ -45,8 +45,8 @@ class DataExportService {
       // Share the file
       await Share.shareXFiles(
         [XFile(file.path)],
-        subject: 'Trip Expense Data Export',
-        text: 'My Trip Expense data export',
+        subject: 'MOMENTRA Data Export',
+        text: 'My MOMENTRA data export',
       );
     } catch (e) {
       rethrow;

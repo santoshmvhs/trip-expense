@@ -10,48 +10,82 @@ class Transfer {
 
 class SettleMath {
   /// balances: userId -> net balance
-  /// positive = is owed, negative = owes
+  /// positive = is owed (should receive), negative = owes (should pay)
+  /// 
+  /// This implements the SettleUp algorithm:
+  /// 1. Separate people into debtors (negative balance) and creditors (positive balance)
+  /// 2. Sort debtors by amount owed (most negative first)
+  /// 3. Sort creditors by amount owed (most positive first)
+  /// 4. Greedily match largest debtor with largest creditor
+  /// 5. Create transfer for minimum of the two amounts
+  /// 6. Update balances and continue until all settled
   static List<Transfer> simplify(Map<String, double> balances, {double eps = 0.01}) {
-    final creditors = <MapEntry<String, double>>[];
-    final debtors = <MapEntry<String, double>>[];
+    // Filter out zero balances and create separate lists
+    final creditors = <String, double>{};
+    final debtors = <String, double>{};
 
-    for (final e in balances.entries) {
-      final v = e.value;
-      if (v > eps) creditors.add(MapEntry(e.key, v));
-      else if (v < -eps) debtors.add(MapEntry(e.key, v));
+    for (final entry in balances.entries) {
+      final balance = entry.value;
+      if (balance > eps) {
+        creditors[entry.key] = balance;
+      } else if (balance < -eps) {
+        debtors[entry.key] = balance;
+      }
     }
 
-    creditors.sort((a, b) => b.value.compareTo(a.value));
-    debtors.sort((a, b) => a.value.compareTo(b.value)); // most negative first
+    // Convert to sorted lists (largest first for creditors, most negative first for debtors)
+    final creditorList = creditors.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final debtorList = debtors.entries.toList()
+      ..sort((a, b) => a.value.compareTo(b.value));
 
-    int i = 0, j = 0;
     final transfers = <Transfer>[];
+    int debtorIndex = 0;
+    int creditorIndex = 0;
 
-    while (i < debtors.length && j < creditors.length) {
-      final debtor = debtors[i];
-      final creditor = creditors[j];
+    // Greedy matching: always match largest debtor with largest creditor
+    while (debtorIndex < debtorList.length && creditorIndex < creditorList.length) {
+      final debtor = debtorList[debtorIndex];
+      final creditor = creditorList[creditorIndex];
 
-      final owed = -debtor.value;
-      final claim = creditor.value;
-      final amt = min(owed, claim);
+      // Amount debtor owes (positive)
+      final debtAmount = -debtor.value;
+      // Amount creditor is owed (positive)
+      final creditAmount = creditor.value;
 
-      if (amt > eps) {
-        transfers.add(Transfer(debtor.key, creditor.key, _round2(amt)));
+      // Transfer the minimum of what's owed and what's claimed
+      final transferAmount = min(debtAmount, creditAmount);
+
+      if (transferAmount > eps) {
+        transfers.add(Transfer(
+          debtor.key,
+          creditor.key,
+          _round2(transferAmount),
+        ));
       }
 
-      final newDebtor = debtor.value + amt;   // less negative
-      final newCred = creditor.value - amt;  // less positive
+      // Update balances
+      final newDebtBalance = debtor.value + transferAmount;
+      final newCreditBalance = creditor.value - transferAmount;
 
-      debtors[i] = MapEntry(debtor.key, newDebtor);
-      creditors[j] = MapEntry(creditor.key, newCred);
+      debtorList[debtorIndex] = MapEntry(debtor.key, newDebtBalance);
+      creditorList[creditorIndex] = MapEntry(creditor.key, newCreditBalance);
 
-      if (debtors[i].value > -eps) i++;
-      if (creditors[j].value < eps) j++;
+      // Move to next debtor if this one is settled (balance >= -eps)
+      if (newDebtBalance.abs() < eps) {
+        debtorIndex++;
+      }
+      // Move to next creditor if this one is settled (balance <= eps)
+      if (newCreditBalance.abs() < eps) {
+        creditorIndex++;
+      }
     }
 
     return transfers;
   }
 
-  static double _round2(double v) => (v * 100).roundToDouble() / 100.0;
+  /// Round to 2 decimal places to avoid floating point precision issues
+  static double _round2(double v) {
+    return (v * 100).roundToDouble() / 100.0;
+  }
 }
-

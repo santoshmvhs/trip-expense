@@ -31,7 +31,7 @@ class Currencies {
   static String getSymbol(String currencyCode) {
     final currency = list.firstWhere(
       (c) => c['code'] == currencyCode,
-      orElse: () => {'code': currencyCode, 'symbol': currencyCode},
+      orElse: () => <String, String>{'code': currencyCode, 'symbol': currencyCode},
     );
     return currency['symbol'] ?? currencyCode;
   }

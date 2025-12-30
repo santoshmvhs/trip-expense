@@ -1,9 +1,9 @@
 {
-    "name": "Trip Expense",
-    "short_name": "Trip Expense",
+    "name": "MOMENTRA",
+    "short_name": "MOMENTRA",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
+    "background_color": "#000000",
     "theme_color": "#0175C2",
     "description": "Track and split trip expenses with friends",
     "orientation": "portrait-primary",

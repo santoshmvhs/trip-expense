@@ -14,6 +14,8 @@ import '../screens/group/qr_invite_screen.dart';
 import '../screens/group/scan_qr_screen.dart';
 import '../features/settle/settle_page.dart';
 import '../screens/notifications/notifications_screen.dart';
+import '../features/moments/moment_detail_page.dart';
+import '../features/moments/share_moment_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final supa = Supabase.instance.client;
@@ -84,6 +86,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               final groupId = st.pathParameters['id']!;
               return SettlePage(groupId: groupId);
             },
+          ),
+          GoRoute(
+            path: 'group/:groupId/moment/:momentId',
+            builder: (ctx, st) {
+              final groupId = st.pathParameters['groupId']!;
+              final momentId = st.pathParameters['momentId']!;
+              return MomentDetailPage(momentId: momentId, groupId: groupId);
+            },
+            routes: [
+              GoRoute(
+                path: 'share',
+                builder: (ctx, st) {
+                  final groupId = st.pathParameters['groupId']!;
+                  final momentId = st.pathParameters['momentId']!;
+                  return ShareMomentScreen(momentId: momentId, groupId: groupId);
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: 'scan-qr',
