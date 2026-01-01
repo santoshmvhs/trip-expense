@@ -93,9 +93,30 @@ ALTER TABLE public.moment_contributions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.moment_activities ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
+-- DROP POLICIES THAT DEPEND ON FUNCTIONS FIRST
+-- ============================================================================
+-- Drop policies that depend on is_moment_participant before dropping the function
+DROP POLICY IF EXISTS "moments_select_if_creator_or_participant" ON public.moments;
+DROP POLICY IF EXISTS "moments_insert_if_authenticated" ON public.moments;
+DROP POLICY IF EXISTS "moments_update_if_creator" ON public.moments;
+
+-- ============================================================================
+-- HELPER FUNCTION: Get user email (bypasses RLS)
+-- ============================================================================
+DROP FUNCTION IF EXISTS public.get_user_email(UUID);
+
+CREATE OR REPLACE FUNCTION public.get_user_email(user_uuid UUID)
+RETURNS TEXT AS $$
+BEGIN
+  RETURN (SELECT email FROM auth.users WHERE id = user_uuid);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+-- ============================================================================
 -- HELPER FUNCTION: Check if user is a moment participant (bypasses RLS)
 -- ============================================================================
-DROP FUNCTION IF EXISTS public.is_moment_participant(UUID, UUID);
+-- Drop function after policies are dropped (or use CASCADE)
+DROP FUNCTION IF EXISTS public.is_moment_participant(UUID, UUID) CASCADE;
 
 CREATE OR REPLACE FUNCTION public.is_moment_participant(moment_uuid UUID, user_uuid UUID)
 RETURNS BOOLEAN AS $$
@@ -103,7 +124,7 @@ BEGIN
   RETURN EXISTS (
     SELECT 1 FROM public.moment_participants
     WHERE moment_id = moment_uuid
-    AND (user_id = user_uuid OR email = (SELECT email FROM auth.users WHERE id = user_uuid))
+    AND (user_id = user_uuid OR email = public.get_user_email(user_uuid))
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
@@ -111,11 +132,6 @@ $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 -- ============================================================================
 -- RLS POLICIES FOR MOMENTS
 -- ============================================================================
-
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "moments_select_if_creator_or_participant" ON public.moments;
-DROP POLICY IF EXISTS "moments_insert_if_authenticated" ON public.moments;
-DROP POLICY IF EXISTS "moments_update_if_creator" ON public.moments;
 
 -- Moments: Users can see moments they created or are participants in
 -- Use helper function to avoid infinite recursion
@@ -156,7 +172,7 @@ ON public.moment_participants FOR SELECT
 USING (
   -- User is a participant themselves (direct row check - no recursion)
   user_id = public.uid() OR 
-  email = (SELECT email FROM auth.users WHERE id = public.uid())
+  email = public.get_user_email(public.uid())
 );
 
 -- Participants: Moment creators can add participants
@@ -181,11 +197,11 @@ ON public.moment_contributions FOR SELECT
 USING (
   -- User is the contributor (direct check - no recursion)
   participant_id = public.uid()::text OR
-  participant_id = (SELECT email FROM auth.users WHERE id = public.uid()) OR
+  participant_id = public.get_user_email(public.uid()) OR
   -- User is a participant (direct check on moment_participants - no recursion)
   moment_id IN (
     SELECT moment_id FROM public.moment_participants 
-    WHERE user_id = public.uid() OR email = (SELECT email FROM auth.users WHERE id = public.uid())
+    WHERE user_id = public.uid() OR email = public.get_user_email(public.uid())
   )
 );
 
@@ -194,9 +210,7 @@ CREATE POLICY "moment_contributions_insert_if_participant"
 ON public.moment_contributions FOR INSERT
 WITH CHECK (
   participant_id = public.uid()::text OR
-  participant_id IN (
-    SELECT email FROM auth.users WHERE id = public.uid()
-  ) OR
+  participant_id = public.get_user_email(public.uid()) OR
   moment_id IN (
     SELECT id FROM public.moments WHERE created_by = public.uid()
   )
@@ -218,7 +232,7 @@ USING (
   -- User is a participant (direct check on moment_participants - no recursion)
   moment_id IN (
     SELECT moment_id FROM public.moment_participants 
-    WHERE user_id = public.uid() OR email = (SELECT email FROM auth.users WHERE id = public.uid())
+    WHERE user_id = public.uid() OR email = public.get_user_email(public.uid())
   )
 );
 
