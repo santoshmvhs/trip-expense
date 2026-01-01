@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/repositories/groups_repo.dart';
 import '../../core/providers/expense_providers.dart';
 import '../../core/models/group.dart';
 import '../../core/constants/currencies.dart';
 import '../../widgets/momentra_logo_appbar.dart';
+import '../../widgets/liquid_glass_card.dart';
 
 final groupsRepoProvider = Provider((_) => GroupsRepo());
 final groupsProvider = FutureProvider((ref) => ref.watch(groupsRepoProvider).listMyGroups());
@@ -195,16 +195,12 @@ class GroupsPage extends ConsumerWidget {
   Widget _buildGroupCard(BuildContext context, WidgetRef ref, Group group) {
     final asyncExpenses = ref.watch(groupExpensesProvider(group.id));
     
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: InkWell(
-        onTap: () => context.go('/shell/group/${group.id}'),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+    return LiquidGlassCard(
+      onTap: () => context.go('/shell/group/${group.id}'),
+      borderRadius: 20,
+      blurIntensity: 12,
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -401,8 +397,6 @@ class GroupsPage extends ConsumerWidget {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 }
