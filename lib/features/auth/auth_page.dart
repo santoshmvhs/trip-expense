@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/momentra_logo_appbar.dart';
 
@@ -26,6 +25,45 @@ class _AuthPageState extends State<AuthPage> {
     _passwordController.dispose();
     _nameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() {
+        _errorMessage = 'Please enter a valid email address';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await Supabase.instance.client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: 'https://momentra.pureborn.in',
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password reset email sent! Please check your inbox.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to send reset email: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _handleAuth() async {
@@ -306,6 +344,16 @@ class _AuthPageState extends State<AuthPage> {
                         )
                       : Text(_isSignUp ? 'Sign Up' : 'Sign In'),
                 ),
+                if (!_isSignUp) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _isLoading ? null : _handleForgotPassword,
+                      child: const Text('Forgot Password?'),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: _isLoading
