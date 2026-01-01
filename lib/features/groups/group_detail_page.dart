@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -26,6 +27,8 @@ import '../../core/providers/expense_providers.dart' show settlementsRepoProvide
 import '../../core/repositories/settlements_repo.dart';
 import '../../core/supabase/supabase_client.dart' show currentUser;
 import '../../widgets/momentra_logo_appbar.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/liquid_glass_card.dart';
 
 final groupsRepoProvider = Provider((_) => GroupsRepo());
 
@@ -70,16 +73,6 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
     return Scaffold(
       appBar: AppBar(
         title: const MomentraLogoAppBar(),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.receipt_long), text: 'Expenses'),
-            Tab(icon: Icon(Icons.analytics_outlined), text: 'Analysis'),
-            Tab(icon: Icon(Icons.account_balance_wallet), text: 'Budgets'),
-            Tab(icon: Icon(Icons.flag_rounded), text: 'Moments'),
-            Tab(icon: Icon(Icons.timeline), text: 'Timeline'),
-          ],
-        ),
         actions: [
           // Export menu
           PopupMenuButton<String>(
@@ -270,6 +263,7 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
         ],
       ),
       floatingActionButton: _buildFloatingActionButton(),
+      bottomNavigationBar: _buildBottomTabBar(),
       body: TabBarView(
         controller: _tabController,
         children: [
@@ -322,6 +316,131 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
       );
     }
     return null;
+  }
+
+  Widget _buildBottomTabBar() {
+    final theme = Theme.of(context);
+    final selectedColor = MomentraColors.warmOrange;
+    final unselectedColor = MomentraColors.lightGray;
+    
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface.withValues(alpha: 0.85),
+            border: Border(
+              top: BorderSide(
+                color: MomentraColors.divider.withValues(alpha: 0.3),
+                width: 0.5,
+              ),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            child: Container(
+              height: 70,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+              _buildTabItem(
+                icon: Icons.receipt_long,
+                label: 'Expenses',
+                index: 0,
+                selectedColor: selectedColor,
+                unselectedColor: unselectedColor,
+              ),
+              _buildTabItem(
+                icon: Icons.analytics_outlined,
+                label: 'Analysis',
+                index: 1,
+                selectedColor: selectedColor,
+                unselectedColor: unselectedColor,
+              ),
+              _buildTabItem(
+                icon: Icons.account_balance_wallet,
+                label: 'Budgets',
+                index: 2,
+                selectedColor: selectedColor,
+                unselectedColor: unselectedColor,
+              ),
+              _buildTabItem(
+                icon: Icons.flag_rounded,
+                label: 'Moments',
+                index: 3,
+                selectedColor: selectedColor,
+                unselectedColor: unselectedColor,
+              ),
+              _buildTabItem(
+                icon: Icons.timeline,
+                label: 'Timeline',
+                index: 4,
+                selectedColor: selectedColor,
+                unselectedColor: unselectedColor,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabItem({
+    required IconData icon,
+    required String label,
+    required int index,
+    required Color selectedColor,
+    required Color unselectedColor,
+  }) {
+    final isSelected = _tabController.index == index;
+    
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          _tabController.animateTo(index);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? selectedColor : unselectedColor,
+                size: 24,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? selectedColor : unselectedColor,
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+              if (isSelected)
+                Container(
+                  margin: const EdgeInsets.only(top: 4),
+                  height: 3,
+                  width: 24,
+                  decoration: BoxDecoration(
+                    color: selectedColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildExpensesTab(BuildContext context, WidgetRef ref, AsyncValue<List<Expense>> asyncExpenses, AsyncValue<Group> asyncGroup) {
