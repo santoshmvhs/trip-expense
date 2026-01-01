@@ -6,6 +6,7 @@ import '../models/moment_participant.dart';
 import '../models/moment_contribution.dart';
 import '../models/moment_health.dart';
 import '../models/moment_guidance.dart';
+import '../models/moment_wishlist_item.dart';
 
 class MomentsRepo {
   /// List moments for a user (all moments they created or are participants in)
@@ -53,6 +54,7 @@ class MomentsRepo {
     required String title,
     String? description,
     required double targetAmount,
+    DateTime? startDate, // NULLABLE: defaults to NOW() in database
     required DateTime endDate,
   }) async {
     final uid = currentUser()!.id;
@@ -65,6 +67,7 @@ class MomentsRepo {
           'title': title,
           'description': description,
           'target_amount': targetAmount,
+          'start_date': startDate?.toIso8601String(),
           'end_date': endDate.toIso8601String(),
           'created_by': uid,
         })
@@ -270,6 +273,100 @@ class MomentsRepo {
     
     // Limit to 3 nudges
     return MomentGuidance(nudges: nudges.take(3).toList());
+  }
+
+  /// Get wishlist items for a moment
+  Future<List<MomentWishlistItem>> getWishlistItems(String momentId) async {
+    final res = await supabase()
+        .from('moment_wishlist_items')
+        .select('*')
+        .eq('moment_id', momentId)
+        .order('priority', ascending: false)
+        .order('created_at', ascending: false);
+
+    return (res as List)
+        .map((e) => MomentWishlistItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Add a wishlist item to a moment
+  Future<MomentWishlistItem> addWishlistItem({
+    required String momentId,
+    required String name,
+    String? description,
+    double? price,
+    String? link,
+    String priority = 'medium',
+    String? imageUrl,
+    int quantity = 1,
+  }) async {
+    final uid = currentUser()!.id;
+    
+    final inserted = await supabase()
+        .from('moment_wishlist_items')
+        .insert({
+          'moment_id': momentId,
+          'name': name,
+          'description': description,
+          'price': price,
+          'link': link,
+          'priority': priority,
+          'image_url': imageUrl,
+          'quantity': quantity,
+          'created_by': uid,
+        })
+        .select('*')
+        .single();
+
+    return MomentWishlistItem.fromJson(inserted as Map<String, dynamic>);
+  }
+
+  /// Update a wishlist item
+  Future<MomentWishlistItem> updateWishlistItem(
+    String itemId,
+    Map<String, dynamic> updates,
+  ) async {
+    final res = await supabase()
+        .from('moment_wishlist_items')
+        .update({
+          ...updates,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', itemId)
+        .select('*')
+        .single();
+
+    return MomentWishlistItem.fromJson(res as Map<String, dynamic>);
+  }
+
+  /// Mark a wishlist item as purchased
+  Future<MomentWishlistItem> markWishlistItemPurchased({
+    required String itemId,
+    String? contributionId,
+  }) async {
+    final uid = currentUser()!.id;
+    
+    return updateWishlistItem(itemId, {
+      'status': 'purchased',
+      'purchased_by': uid,
+      'purchased_at': DateTime.now().toIso8601String(),
+      'contribution_id': contributionId,
+    });
+  }
+
+  /// Mark a wishlist item as fulfilled
+  Future<MomentWishlistItem> markWishlistItemFulfilled(String itemId) async {
+    return updateWishlistItem(itemId, {
+      'status': 'fulfilled',
+    });
+  }
+
+  /// Delete a wishlist item
+  Future<void> deleteWishlistItem(String itemId) async {
+    await supabase()
+        .from('moment_wishlist_items')
+        .delete()
+        .eq('id', itemId);
   }
 }
 

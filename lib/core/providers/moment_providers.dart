@@ -5,6 +5,7 @@ import '../models/moment_participant.dart';
 import '../models/moment_contribution.dart';
 import '../models/moment_health.dart';
 import '../models/moment_guidance.dart';
+import '../models/moment_wishlist_item.dart';
 
 final momentsRepoProvider = Provider<MomentsRepo>((ref) => MomentsRepo());
 
@@ -39,5 +40,10 @@ final momentGuidanceProvider = FutureProvider.family<MomentGuidance, String>((re
   final moment = await ref.watch(momentProvider(momentId).future);
   final health = await ref.watch(momentHealthProvider(momentId).future);
   return ref.watch(momentsRepoProvider).generateGuidance(moment, health);
+});
+
+/// Provider for moment wishlist items
+final momentWishlistItemsProvider = FutureProvider.family<List<MomentWishlistItem>, String>((ref, momentId) {
+  return ref.watch(momentsRepoProvider).getWishlistItems(momentId);
 });
 

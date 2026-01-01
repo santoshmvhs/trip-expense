@@ -11,6 +11,7 @@ import '../../theme/app_theme.dart';
 import 'add_participant_dialog.dart';
 import 'add_contribution_dialog.dart';
 import 'moment_notifications_settings.dart';
+import 'wishlist_items_section.dart';
 
 class MomentDetailPage extends ConsumerWidget {
   final String momentId;
@@ -115,6 +116,7 @@ class MomentDetailPage extends ConsumerWidget {
           ref.invalidate(momentGuidanceProvider(momentId));
           ref.invalidate(momentParticipantsProvider(momentId));
           ref.invalidate(momentContributionsProvider(momentId));
+          ref.invalidate(momentWishlistItemsProvider(momentId));
         },
         child: asyncMoment.when(
           data: (moment) {
@@ -167,6 +169,12 @@ class MomentDetailPage extends ConsumerWidget {
                   error: (_, __) => const SizedBox(),
                 ),
                 const SizedBox(height: 16),
+                
+                // Wishlist Items (only for wishlist type moments)
+                if (moment.type == 'wishlist') ...[
+                  WishlistItemsSection(momentId: momentId),
+                  const SizedBox(height: 16),
+                ],
                 
                 // Participants
                 asyncParticipants.when(

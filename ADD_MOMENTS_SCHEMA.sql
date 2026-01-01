@@ -7,7 +7,7 @@
 CREATE TABLE IF NOT EXISTS public.moments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE, -- NULLABLE: moments can be standalone or group-linked
-  type TEXT NOT NULL CHECK (type IN ('trip', 'gift', 'goal')),
+  type TEXT NOT NULL CHECK (type IN ('trip', 'gift', 'goal', 'wishlist')),
   title TEXT NOT NULL,
   description TEXT,
   target_amount NUMERIC(12,2) NOT NULL CHECK (target_amount > 0),
@@ -65,6 +65,28 @@ CREATE TABLE IF NOT EXISTS public.moment_activities (
 );
 
 -- ============================================================================
+-- MOMENT WISHLIST ITEMS TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.moment_wishlist_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  moment_id UUID NOT NULL REFERENCES public.moments(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  price NUMERIC(12,2) CHECK (price >= 0),
+  link TEXT, -- URL to the item
+  priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
+  status TEXT NOT NULL DEFAULT 'wanted' CHECK (status IN ('wanted', 'purchased', 'fulfilled')),
+  image_url TEXT, -- URL to item image
+  quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  purchased_by UUID REFERENCES auth.users(id) ON DELETE SET NULL, -- Who purchased/fulfilled it
+  purchased_at TIMESTAMPTZ, -- When it was purchased
+  contribution_id UUID REFERENCES public.moment_contributions(id) ON DELETE SET NULL, -- Link to contribution if applicable
+  created_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================================
 -- ADD MOMENT_ID TO EXPENSES (optional link)
 -- ============================================================================
 ALTER TABLE public.expenses 
@@ -83,6 +105,9 @@ CREATE INDEX IF NOT EXISTS idx_moment_contributions_participant ON public.moment
 CREATE INDEX IF NOT EXISTS idx_moment_contributions_expense ON public.moment_contributions(expense_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_moment ON public.expenses(moment_id);
 CREATE INDEX IF NOT EXISTS idx_moment_activities_moment ON public.moment_activities(moment_id);
+CREATE INDEX IF NOT EXISTS idx_moment_wishlist_items_moment ON public.moment_wishlist_items(moment_id);
+CREATE INDEX IF NOT EXISTS idx_moment_wishlist_items_status ON public.moment_wishlist_items(status);
+CREATE INDEX IF NOT EXISTS idx_moment_wishlist_items_created_by ON public.moment_wishlist_items(created_by);
 
 -- ============================================================================
 -- ENABLE ROW LEVEL SECURITY
@@ -91,6 +116,7 @@ ALTER TABLE public.moments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.moment_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.moment_contributions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.moment_activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.moment_wishlist_items ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
 -- DROP POLICIES THAT DEPEND ON FUNCTIONS FIRST
@@ -100,11 +126,30 @@ DROP POLICY IF EXISTS "moments_select_if_creator_or_participant" ON public.momen
 DROP POLICY IF EXISTS "moments_insert_if_authenticated" ON public.moments;
 DROP POLICY IF EXISTS "moments_update_if_creator" ON public.moments;
 
+-- Drop policies that depend on get_user_email BEFORE dropping the function
+DROP POLICY IF EXISTS "moment_participants_select_if_moment_access" ON public.moment_participants;
+DROP POLICY IF EXISTS "moment_participants_insert_if_creator" ON public.moment_participants;
+DROP POLICY IF EXISTS "moment_contributions_select_if_moment_access" ON public.moment_contributions;
+DROP POLICY IF EXISTS "moment_contributions_insert_if_participant" ON public.moment_contributions;
+DROP POLICY IF EXISTS "moment_activities_select_if_moment_access" ON public.moment_activities;
+DROP POLICY IF EXISTS "moment_activities_insert_if_authenticated" ON public.moment_activities;
+DROP POLICY IF EXISTS "moment_wishlist_items_select_if_moment_access" ON public.moment_wishlist_items;
+DROP POLICY IF EXISTS "moment_wishlist_items_insert_if_participant" ON public.moment_wishlist_items;
+DROP POLICY IF EXISTS "moment_wishlist_items_update_if_participant" ON public.moment_wishlist_items;
+DROP POLICY IF EXISTS "moment_wishlist_items_delete_if_creator" ON public.moment_wishlist_items;
+
+-- ============================================================================
+-- HELPER FUNCTIONS: Drop in correct order (is_moment_participant depends on get_user_email)
+-- ============================================================================
+-- Drop is_moment_participant first (it depends on get_user_email)
+DROP FUNCTION IF EXISTS public.is_moment_participant(UUID, UUID) CASCADE;
+
+-- Then drop get_user_email (after all dependent functions are dropped)
+DROP FUNCTION IF EXISTS public.get_user_email(UUID) CASCADE;
+
 -- ============================================================================
 -- HELPER FUNCTION: Get user email (bypasses RLS)
 -- ============================================================================
-DROP FUNCTION IF EXISTS public.get_user_email(UUID);
-
 CREATE OR REPLACE FUNCTION public.get_user_email(user_uuid UUID)
 RETURNS TEXT AS $$
 BEGIN
@@ -115,8 +160,6 @@ $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 -- ============================================================================
 -- HELPER FUNCTION: Check if user is a moment participant (bypasses RLS)
 -- ============================================================================
--- Drop function after policies are dropped (or use CASCADE)
-DROP FUNCTION IF EXISTS public.is_moment_participant(UUID, UUID) CASCADE;
 
 CREATE OR REPLACE FUNCTION public.is_moment_participant(moment_uuid UUID, user_uuid UUID)
 RETURNS BOOLEAN AS $$
@@ -161,9 +204,7 @@ WITH CHECK (created_by = public.uid());
 -- RLS POLICIES FOR MOMENT PARTICIPANTS
 -- ============================================================================
 
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "moment_participants_select_if_moment_access" ON public.moment_participants;
-DROP POLICY IF EXISTS "moment_participants_insert_if_creator" ON public.moment_participants;
+-- Policies already dropped above (before function drop)
 
 -- Participants: Can see participants of moments they have access to
 -- Avoid recursion: Only check direct row access, not through moments policy
@@ -186,9 +227,7 @@ WITH CHECK (
 -- RLS POLICIES FOR MOMENT CONTRIBUTIONS
 -- ============================================================================
 
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "moment_contributions_select_if_moment_access" ON public.moment_contributions;
-DROP POLICY IF EXISTS "moment_contributions_insert_if_participant" ON public.moment_contributions;
+-- Policies already dropped above (before function drop)
 
 -- Contributions: Can see contributions of moments they have access to
 -- Avoid recursion: Only check moment_participants directly, not moments
@@ -220,9 +259,7 @@ WITH CHECK (
 -- RLS POLICIES FOR MOMENT ACTIVITIES
 -- ============================================================================
 
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "moment_activities_select_if_moment_access" ON public.moment_activities;
-DROP POLICY IF EXISTS "moment_activities_insert_if_authenticated" ON public.moment_activities;
+-- Policies already dropped above (before function drop)
 
 -- Activities: Can see activities of moments they have access to
 -- Avoid recursion: Only check direct access, not through moments policy
@@ -240,6 +277,55 @@ USING (
 CREATE POLICY "moment_activities_insert_if_authenticated"
 ON public.moment_activities FOR INSERT
 WITH CHECK (user_id = public.uid());
+
+-- ============================================================================
+-- RLS POLICIES FOR MOMENT WISHLIST ITEMS
+-- ============================================================================
+
+-- Policies already dropped above (before function drop)
+
+-- Wishlist items: Can see items of moments they have access to
+CREATE POLICY "moment_wishlist_items_select_if_moment_access"
+ON public.moment_wishlist_items FOR SELECT
+USING (
+  -- User is a participant (direct check on moment_participants - no recursion)
+  moment_id IN (
+    SELECT moment_id FROM public.moment_participants 
+    WHERE user_id = public.uid() OR email = public.get_user_email(public.uid())
+  )
+);
+
+-- Wishlist items: Participants can add items
+CREATE POLICY "moment_wishlist_items_insert_if_participant"
+ON public.moment_wishlist_items FOR INSERT
+WITH CHECK (
+  created_by = public.uid() AND
+  moment_id IN (
+    SELECT moment_id FROM public.moment_participants 
+    WHERE user_id = public.uid() OR email = public.get_user_email(public.uid())
+  )
+);
+
+-- Wishlist items: Participants can update items (mark as purchased, etc.)
+CREATE POLICY "moment_wishlist_items_update_if_participant"
+ON public.moment_wishlist_items FOR UPDATE
+USING (
+  moment_id IN (
+    SELECT moment_id FROM public.moment_participants 
+    WHERE user_id = public.uid() OR email = public.get_user_email(public.uid())
+  )
+)
+WITH CHECK (
+  moment_id IN (
+    SELECT moment_id FROM public.moment_participants 
+    WHERE user_id = public.uid() OR email = public.get_user_email(public.uid())
+  )
+);
+
+-- Wishlist items: Creator can delete items
+CREATE POLICY "moment_wishlist_items_delete_if_creator"
+ON public.moment_wishlist_items FOR DELETE
+USING (created_by = public.uid());
 
 -- ============================================================================
 -- FUNCTION: Update moment current_amount when contribution is added
@@ -331,4 +417,20 @@ CREATE TRIGGER trigger_log_moment_participant
 AFTER INSERT ON public.moment_participants
 FOR EACH ROW
 EXECUTE FUNCTION public.log_moment_participant();
+
+-- ============================================================================
+-- FUNCTION: Update updated_at timestamp for wishlist items
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.update_wishlist_item_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_wishlist_item_timestamp
+BEFORE UPDATE ON public.moment_wishlist_items
+FOR EACH ROW
+EXECUTE FUNCTION public.update_wishlist_item_timestamp();
 
