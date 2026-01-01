@@ -50,6 +50,9 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this); // Added Moments tab
+    _tabController.addListener(() {
+      setState(() {}); // Rebuild when tab changes to update FAB
+    });
   }
 
   @override
@@ -250,28 +253,7 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
           ),
         ],
       ),
-      floatingActionButton: _tabController.index == 0
-          ? FloatingActionButton.extended(
-              heroTag: 'add_expense_fab_${widget.groupId}',
-              onPressed: () {
-                context.push('/shell/group/${widget.groupId}/add-expense');
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Add Expense'),
-            )
-          : _tabController.index == 3 // Moments tab
-              ? FloatingActionButton.extended(
-                  heroTag: 'add_moment_fab_${widget.groupId}',
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => CreateMomentDialog(groupId: widget.groupId),
-                    );
-                  },
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Create Moment'),
-                )
-              : null,
+      floatingActionButton: _buildFloatingActionButton(),
       body: TabBarView(
         controller: _tabController,
         children: [
@@ -296,6 +278,34 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
         ],
       ),
     );
+  }
+
+  Widget? _buildFloatingActionButton() {
+    if (_tabController.index == 0) {
+      // Expenses tab
+      return FloatingActionButton.extended(
+        heroTag: 'add_expense_fab_${widget.groupId}',
+        onPressed: () {
+          context.push('/shell/group/${widget.groupId}/add-expense');
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Add Expense'),
+      );
+    } else if (_tabController.index == 3) {
+      // Moments tab
+      return FloatingActionButton.extended(
+        heroTag: 'add_moment_fab_${widget.groupId}',
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (_) => CreateMomentDialog(groupId: widget.groupId),
+          );
+        },
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Create Moment'),
+      );
+    }
+    return null;
   }
 
   Widget _buildExpensesTab(BuildContext context, WidgetRef ref, AsyncValue<List<Expense>> asyncExpenses, AsyncValue<Group> asyncGroup) {

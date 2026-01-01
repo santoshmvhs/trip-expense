@@ -12,6 +12,8 @@ import 'add_participant_dialog.dart';
 import 'add_contribution_dialog.dart';
 import 'moment_notifications_settings.dart';
 import 'wishlist_items_section.dart';
+import 'edit_moment_dialog.dart';
+import 'package:go_router/go_router.dart';
 
 class MomentDetailPage extends ConsumerWidget {
   final String momentId;
@@ -84,6 +86,14 @@ class MomentDetailPage extends ConsumerWidget {
                         builder: (_) => MomentNotificationsSettings(momentId: momentId),
                       ),
                     );
+                  } else if (value == 'edit') {
+                    showDialog(
+                      context: context,
+                      builder: (_) => EditMomentDialog(
+                        moment: moment,
+                        groupId: groupId,
+                      ),
+                    );
                   } else if (value == 'close') {
                     try {
                       await ref.read(momentsRepoProvider).closeMoment(momentId);
@@ -98,6 +108,48 @@ class MomentDetailPage extends ConsumerWidget {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Error: $e')),
                         );
+                      }
+                    }
+                  } else if (value == 'delete') {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text('Delete Moment'),
+                        content: Text('Are you sure you want to delete "${moment.title}"? This action cannot be undone.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.red,
+                            ),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmed == true) {
+                      try {
+                        await ref.read(momentsRepoProvider).deleteMoment(momentId);
+                        if (context.mounted) {
+                          if (groupId != null) {
+                            ref.invalidate(momentsProvider(groupId));
+                          }
+                          context.pop(); // Go back to moments list
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Moment deleted')),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
                       }
                     }
                   }

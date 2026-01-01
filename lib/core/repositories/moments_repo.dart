@@ -110,6 +110,14 @@ class MomentsRepo {
     return updateMoment(momentId, {'lifecycle_state': 'COMPLETED'});
   }
 
+  /// Delete a moment
+  Future<void> deleteMoment(String momentId) async {
+    await supabase()
+        .from('moments')
+        .delete()
+        .eq('id', momentId);
+  }
+
   /// Get participants for a moment
   Future<List<MomentParticipant>> getParticipants(String momentId) async {
     final res = await supabase()

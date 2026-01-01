@@ -125,6 +125,7 @@ ALTER TABLE public.moment_wishlist_items ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "moments_select_if_creator_or_participant" ON public.moments;
 DROP POLICY IF EXISTS "moments_insert_if_authenticated" ON public.moments;
 DROP POLICY IF EXISTS "moments_update_if_creator" ON public.moments;
+DROP POLICY IF EXISTS "moments_delete_if_creator" ON public.moments;
 
 -- Drop policies that depend on get_user_email BEFORE dropping the function
 DROP POLICY IF EXISTS "moment_participants_select_if_moment_access" ON public.moment_participants;
@@ -199,6 +200,11 @@ CREATE POLICY "moments_update_if_creator"
 ON public.moments FOR UPDATE
 USING (created_by = public.uid())
 WITH CHECK (created_by = public.uid());
+
+-- Moments: Creators can delete their moments
+CREATE POLICY "moments_delete_if_creator"
+ON public.moments FOR DELETE
+USING (created_by = public.uid());
 
 -- ============================================================================
 -- RLS POLICIES FOR MOMENT PARTICIPANTS
@@ -429,8 +435,31 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Drop trigger if it exists (for idempotency)
+DROP TRIGGER IF EXISTS trigger_update_wishlist_item_timestamp ON public.moment_wishlist_items;
+
 CREATE TRIGGER trigger_update_wishlist_item_timestamp
 BEFORE UPDATE ON public.moment_wishlist_items
 FOR EACH ROW
 EXECUTE FUNCTION public.update_wishlist_item_timestamp();
+
+-- ============================================================================
+-- UPDATE EXISTING CONSTRAINT (if table already exists)
+-- ============================================================================
+-- Drop the old constraint if it exists (without 'wishlist')
+DO $$
+BEGIN
+  -- Check if the constraint exists and drop it
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'moments_type_check' 
+    AND conrelid = 'public.moments'::regclass
+  ) THEN
+    ALTER TABLE public.moments DROP CONSTRAINT moments_type_check;
+  END IF;
+END $$;
+
+-- Add the new constraint with 'wishlist' included
+ALTER TABLE public.moments 
+ADD CONSTRAINT moments_type_check CHECK (type IN ('trip', 'gift', 'goal', 'wishlist'));
 
