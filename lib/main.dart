@@ -12,18 +12,37 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load environment variables with error handling
+  bool envLoaded = false;
   try {
     await dotenv.load(fileName: '.env');
+    envLoaded = true;
+    debugPrint('✅ .env file loaded successfully');
   } catch (e) {
-    debugPrint('Warning: Could not load .env file: $e');
+    debugPrint('⚠️ Warning: Could not load .env file: $e');
     debugPrint('Using fallback credentials');
+    envLoaded = false;
   }
 
-  // Get Supabase credentials from environment variables
-  final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? 
-      'https://uzlctsulpzlvwvlkekgj.supabase.co'; // Fallback for development
-  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? 
-      'sb_publishable_TNo02OZJnNUGYI0KoG1Aaw_KxEkyoCU'; // Fallback for development
+  // Get Supabase credentials from environment variables (only if loaded)
+  String supabaseUrl;
+  String supabaseAnonKey;
+  
+  if (envLoaded) {
+    try {
+      supabaseUrl = dotenv.env['SUPABASE_URL'] ?? 
+          'https://uzlctsulpzlvwvlkekgj.supabase.co';
+      supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? 
+          'sb_publishable_TNo02OZJnNUGYI0KoG1Aaw_KxEkyoCU';
+    } catch (e) {
+      debugPrint('⚠️ Error reading env vars: $e');
+      supabaseUrl = 'https://uzlctsulpzlvwvlkekgj.supabase.co';
+      supabaseAnonKey = 'sb_publishable_TNo02OZJnNUGYI0KoG1Aaw_KxEkyoCU';
+    }
+  } else {
+    // Use fallback credentials if .env not loaded
+    supabaseUrl = 'https://uzlctsulpzlvwvlkekgj.supabase.co';
+    supabaseAnonKey = 'sb_publishable_TNo02OZJnNUGYI0KoG1Aaw_KxEkyoCU';
+  }
 
   if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
     debugPrint('ERROR: Missing Supabase credentials');
