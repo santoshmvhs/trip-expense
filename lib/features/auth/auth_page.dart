@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../widgets/momentra_logo_appbar.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -167,7 +168,7 @@ class _AuthPageState extends State<AuthPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isSignUp ? 'Sign Up' : 'Sign In'),
+        title: const MomentraLogoAppBar(),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

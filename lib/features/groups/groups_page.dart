@@ -7,6 +7,7 @@ import '../../core/repositories/groups_repo.dart';
 import '../../core/providers/expense_providers.dart';
 import '../../core/models/group.dart';
 import '../../core/constants/currencies.dart';
+import '../../widgets/momentra_logo_appbar.dart';
 
 final groupsRepoProvider = Provider((_) => GroupsRepo());
 final groupsProvider = FutureProvider((ref) => ref.watch(groupsRepoProvider).listMyGroups());
@@ -20,7 +21,7 @@ class GroupsPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Your groups'),
+        title: const MomentraLogoAppBar(),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),

@@ -11,6 +11,7 @@ import '../../core/supabase/supabase_client.dart';
 import '../../core/models/expense.dart';
 import '../../core/models/expense_split.dart';
 import '../../core/utils/category_icons.dart';
+import '../../widgets/momentra_logo_appbar.dart';
 import 'add_expense_page.dart';
 
 final expenseDetailProvider = FutureProvider.family((ref, String expenseId) {
@@ -41,7 +42,7 @@ class ExpenseDetailPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Expense Details'),
+        title: const MomentraLogoAppBar(),
         actions: [
           asyncExpense.when(
             data: (expense) => PopupMenuButton<String>(

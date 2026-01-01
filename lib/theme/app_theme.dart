@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../widgets/momentra_logo_appbar.dart';
 
 /// Momentra Brand Colors
 /// Extracted from momentra.png: Black background, white text, warm orange/yellow glow
@@ -71,6 +72,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: cs,
       scaffoldBackgroundColor: cs.background ?? MomentraColors.charcoal,
+      // fontFamily: 'Inter', // Uncomment when font files are added to assets/fonts/
     );
 
     return base.copyWith(
@@ -79,11 +81,14 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         foregroundColor: MomentraColors.white,
+        centerTitle: true, // Center the title (logo)
         titleTextStyle: TextStyle(
+          // fontFamily: 'Inter', // Uncomment when font files are added
           color: MomentraColors.white,
           fontSize: 20,
           fontWeight: FontWeight.w700,
           letterSpacing: 1,
+          height: 1.3,
         ),
         iconTheme: const IconThemeData(color: MomentraColors.white),
       ),
@@ -134,10 +139,12 @@ class AppTheme {
           minimumSize: const Size.fromHeight(52),
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: const TextStyle(
+          textStyle: TextStyle(
+            // fontFamily: 'Inter', // Uncomment when font files are added
             fontWeight: FontWeight.w600,
             fontSize: 16,
             letterSpacing: 0.5,
+            height: 1.4,
           ),
         ),
       ),
@@ -148,44 +155,76 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       textTheme: base.textTheme.copyWith(
-        displayLarge: const TextStyle(
+        displayLarge: TextStyle(
+          // fontFamily: 'Inter', // Uncomment when font files are added
           color: MomentraColors.white,
           fontSize: 32,
           fontWeight: FontWeight.w900,
           letterSpacing: 2,
+          height: 1.2,
         ),
-        displayMedium: const TextStyle(
+        displayMedium: TextStyle(
+          // fontFamily: 'Inter',
           color: MomentraColors.white,
           fontSize: 28,
           fontWeight: FontWeight.w800,
           letterSpacing: 1.5,
+          height: 1.3,
         ),
-        headlineMedium: const TextStyle(
+        headlineMedium: TextStyle(
+          // fontFamily: 'Inter',
           color: MomentraColors.white,
           fontSize: 20,
           fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
+          height: 1.4,
         ),
-        titleLarge: const TextStyle(
+        titleLarge: TextStyle(
+          // fontFamily: 'Inter',
           color: MomentraColors.white,
           fontSize: 18,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+          height: 1.4,
         ),
-        titleMedium: const TextStyle(
+        titleMedium: TextStyle(
+          // fontFamily: 'Inter',
           color: MomentraColors.white,
           fontSize: 16,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
+          height: 1.5,
         ),
-        bodyLarge: const TextStyle(
+        bodyLarge: TextStyle(
+          // fontFamily: 'Inter',
           color: MomentraColors.white,
           fontSize: 16,
+          fontWeight: FontWeight.w400,
+          letterSpacing: 0,
+          height: 1.5,
         ),
-        bodyMedium: const TextStyle(
+        bodyMedium: TextStyle(
+          // fontFamily: 'Inter',
           color: MomentraColors.lightGray,
           fontSize: 14,
+          fontWeight: FontWeight.w400,
+          letterSpacing: 0,
+          height: 1.5,
         ),
-        bodySmall: const TextStyle(
+        bodySmall: TextStyle(
+          // fontFamily: 'Inter',
           color: MomentraColors.lightGray,
           fontSize: 12,
+          fontWeight: FontWeight.w400,
+          letterSpacing: 0.1,
+          height: 1.4,
+        ),
+        labelLarge: TextStyle(
+          // fontFamily: 'Inter',
+          color: MomentraColors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
         ),
       ),
       dividerTheme: DividerThemeData(

@@ -264,5 +264,35 @@ class GroupsRepo {
       }
     }
   }
+
+  /// Leave a group (only for non-admin members)
+  /// Returns true if successful, throws exception if user is admin or not a member
+  Future<void> leaveGroup(String groupId) async {
+    final uid = currentUser()!.id;
+    
+    // Check if user is a member and get their role
+    final memberRes = await supabase()
+        .from('group_members')
+        .select('role')
+        .eq('group_id', groupId)
+        .eq('user_id', uid)
+        .maybeSingle();
+    
+    if (memberRes == null) {
+      throw Exception('You are not a member of this group');
+    }
+    
+    final role = memberRes['role'] as String?;
+    if (role == 'admin') {
+      throw Exception('Admins cannot leave groups. Please transfer admin role or delete the group instead.');
+    }
+    
+    // Delete the member record (RLS policy will verify they're not an admin)
+    await supabase()
+        .from('group_members')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('user_id', uid);
+  }
 }
 

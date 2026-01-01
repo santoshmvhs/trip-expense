@@ -11,6 +11,7 @@ import '../../core/models/expense.dart';
 import '../../core/models/group.dart';
 import '../../core/models/moment.dart';
 import '../../widgets/moment_health_badge.dart';
+import '../../widgets/momentra_logo_appbar.dart';
 import '../../theme/app_theme.dart';
 
 final groupsRepoProvider = Provider((_) => GroupsRepo());
@@ -40,7 +41,7 @@ class InsightsPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Insights'),
+        title: const MomentraLogoAppBar(),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

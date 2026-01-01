@@ -7,6 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/supabase/supabase_client.dart';
 import '../../core/providers/theme_provider.dart';
 import '../../core/services/data_export_service.dart';
+import '../../widgets/momentra_logo_appbar.dart';
 import 'edit_profile_dialog.dart';
 import 'currency_settings_dialog.dart';
 import 'terms_page.dart';
@@ -254,7 +255,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: const MomentraLogoAppBar(),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

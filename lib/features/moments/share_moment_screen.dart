@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../widgets/momentra_logo_appbar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:cross_file/cross_file.dart';
 import '../../core/providers/moment_providers.dart';
@@ -115,7 +116,7 @@ class _ShareMomentScreenState extends ConsumerState<ShareMomentScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Share Moment'),
+        title: const MomentraLogoAppBar(),
       ),
       body: asyncMoment.when(
         data: (moment) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/momentra_logo_appbar.dart';
 
 class TermsPage extends StatelessWidget {
   const TermsPage({super.key});
@@ -7,7 +8,7 @@ class TermsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Terms of Service'),
+        title: const MomentraLogoAppBar(),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

@@ -11,6 +11,7 @@ import '../../core/models/expense_split.dart';
 import '../../core/models/settlement.dart';
 import '../../core/models/group.dart';
 import '../../core/constants/currencies.dart';
+import '../../widgets/momentra_logo_appbar.dart';
 import 'settle_math.dart';
 import 'record_payment_dialog.dart';
 
@@ -101,7 +102,7 @@ class SettlePage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settle Up'),
+        title: const MomentraLogoAppBar(),
       ),
       body: asyncGroup.when(
         data: (group) => asyncBalances.when(

@@ -13,6 +13,7 @@ import '../../core/providers/expense_providers.dart';
 import '../../core/providers/expense_with_splits_provider.dart';
 import '../../core/providers/category_providers.dart';
 import '../../core/providers/activity_providers.dart';
+import '../../widgets/momentra_logo_appbar.dart';
 import '../../core/providers/moment_providers.dart';
 import '../../core/models/category.dart' as models;
 import '../../core/models/expense_split.dart';
@@ -511,7 +512,7 @@ class _AddExpensePageState extends ConsumerState<AddExpensePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Expense'),
+        title: const MomentraLogoAppBar(),
       ),
       body: Form(
         key: _formKey,

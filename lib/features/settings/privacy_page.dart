@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/momentra_logo_appbar.dart';
 
 class PrivacyPage extends StatelessWidget {
   const PrivacyPage({super.key});
@@ -7,7 +8,7 @@ class PrivacyPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Privacy Policy'),
+        title: const MomentraLogoAppBar(),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

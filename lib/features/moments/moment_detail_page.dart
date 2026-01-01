@@ -7,6 +7,7 @@ import '../../core/models/moment.dart';
 import '../../widgets/moment_health_badge.dart';
 import '../../widgets/moment_progress_card.dart';
 import '../../widgets/moment_guidance_card.dart';
+import '../../widgets/momentra_logo_appbar.dart';
 import '../../theme/app_theme.dart';
 import 'add_participant_dialog.dart';
 import 'add_contribution_dialog.dart';
@@ -35,11 +36,7 @@ class MomentDetailPage extends ConsumerWidget {
     
     return Scaffold(
       appBar: AppBar(
-        title: asyncMoment.when(
-          data: (moment) => Text(moment.title),
-          loading: () => const Text('Moment'),
-          error: (_, __) => const Text('Moment'),
-        ),
+        title: const MomentraLogoAppBar(),
         actions: [
           asyncMoment.when(
             data: (moment) {

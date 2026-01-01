@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../widgets/momentra_logo_appbar.dart';
 import '../../theme/app_theme.dart';
 
 /// Notification preferences for moments
@@ -27,7 +28,7 @@ class _MomentNotificationsSettingsState extends ConsumerState<MomentNotification
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notification Settings'),
+        title: const MomentraLogoAppBar(),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

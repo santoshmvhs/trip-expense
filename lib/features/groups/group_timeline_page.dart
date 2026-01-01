@@ -7,6 +7,7 @@ import '../../core/providers/activity_providers.dart';
 import '../../core/providers/expense_providers.dart';
 import '../../core/models/group_activity.dart';
 import '../../core/supabase/supabase_client.dart';
+import '../../widgets/momentra_logo_appbar.dart';
 
 class GroupTimelinePage extends ConsumerWidget {
   final String groupId;
@@ -19,7 +20,7 @@ class GroupTimelinePage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Group Timeline'),
+        title: const MomentraLogoAppBar(),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

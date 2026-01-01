@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../widgets/momentra_logo_appbar.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:cross_file/cross_file.dart';
@@ -101,7 +102,7 @@ class _QrInviteScreenState extends ConsumerState<QrInviteScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Invite via QR Code'),
+        title: const MomentraLogoAppBar(),
       ),
       body: asyncGroup.when(
         data: (group) {

@@ -25,6 +25,7 @@ import '../moments/create_moment_dialog.dart';
 import '../../core/providers/expense_providers.dart' show settlementsRepoProvider;
 import '../../core/repositories/settlements_repo.dart';
 import '../../core/supabase/supabase_client.dart' show currentUser;
+import '../../widgets/momentra_logo_appbar.dart';
 
 final groupsRepoProvider = Provider((_) => GroupsRepo());
 
@@ -68,11 +69,7 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
 
     return Scaffold(
       appBar: AppBar(
-        title: asyncGroup.when(
-          data: (group) => Text(group.name),
-          loading: () => const Text('Group'),
-          error: (_, __) => const Text('Group'),
-        ),
+        title: const MomentraLogoAppBar(),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -125,6 +122,8 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
                   _showEditGroupDialog(context, ref, group);
                 } else if (value == 'delete') {
                   _confirmDeleteGroup(context, ref, widget.groupId);
+                } else if (value == 'leave') {
+                  _confirmLeaveGroup(context, ref, widget.groupId);
                 }
               } catch (e) {
                 if (context.mounted) {
@@ -139,6 +138,9 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
                 data: (group) {
                   final currentUserId = currentUser()?.id;
                   final isCreator = group.createdBy == currentUserId;
+                  
+                  // We'll check admin status when the menu item is selected
+                  // For now, show leave option to all non-creators (will be validated on action)
                   
                   return [
                     const PopupMenuItem(
@@ -182,6 +184,20 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
                         ],
                       ),
                     ),
+                    if (!isCreator) ...[
+                      // Non-creators can leave group (if not admin, will be validated)
+                      const PopupMenuDivider(),
+                      const PopupMenuItem(
+                        value: 'leave',
+                        child: Row(
+                          children: [
+                            Icon(Icons.exit_to_app, color: Colors.orange),
+                            SizedBox(width: 8),
+                            Text('Leave Group', style: TextStyle(color: Colors.orange)),
+                          ],
+                        ),
+                      ),
+                    ],
                     if (isCreator) ...[
                       const PopupMenuDivider(),
                       const PopupMenuItem(
@@ -2553,7 +2569,64 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
           initialAmount: balanceAmount,
         ),
       );
-    });
+    }    );
+  }
+
+  static void _confirmLeaveGroup(BuildContext context, WidgetRef ref, String groupId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leave Group'),
+        content: const Text(
+          'Are you sure you want to leave this group? You will no longer have access to this group\'s expenses and data. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              try {
+                await ref.read(groupsRepoProvider).leaveGroup(groupId);
+                
+                // Invalidate providers to refresh the UI
+                ref.invalidate(groupsProvider);
+                ref.invalidate(groupProvider(groupId));
+                ref.invalidate(groupExpensesProvider(groupId));
+                ref.invalidate(groupMembersProvider(groupId));
+                ref.invalidate(groupActivitiesProvider(groupId));
+                
+                if (context.mounted) {
+                  Navigator.of(context).pop(); // Close dialog
+                  context.go('/shell'); // Navigate back to home
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('You have left the group'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.of(context).pop(); // Close dialog
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error leaving group: ${e.toString().replaceAll("Exception: ", "")}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.orange,
+            ),
+            child: const Text('Leave Group'),
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatCurrency(double amount, String currency) {
