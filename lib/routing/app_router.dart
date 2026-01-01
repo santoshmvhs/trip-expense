@@ -22,14 +22,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     initialLocation: '/shell',
+    debugLogDiagnostics: true,
     refreshListenable: GoRouterRefreshStream(supa.auth.onAuthStateChange),
     redirect: (context, state) {
-      final session = supa.auth.currentSession;
-      final loggingIn = state.matchedLocation == '/auth';
+      try {
+        final session = supa.auth.currentSession;
+        final loggingIn = state.matchedLocation == '/auth';
 
-      if (session == null && !loggingIn) return '/auth';
-      if (session != null && loggingIn) return '/shell';
-      return null;
+        if (session == null && !loggingIn) return '/auth';
+        if (session != null && loggingIn) return '/shell';
+        return null;
+      } catch (e) {
+        debugPrint('Router redirect error: $e');
+        return '/auth'; // Fallback to auth on error
+      }
     },
     routes: [
       GoRoute(path: '/auth', builder: (_, __) => const AuthPage()),
