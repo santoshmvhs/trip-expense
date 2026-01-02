@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -41,43 +42,43 @@ class GroupsPage extends ConsumerWidget {
         icon: const Icon(Icons.add),
         label: const Text('New group'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: asyncGroups.when(
-          data: (groups) {
-            if (groups.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.groups_outlined,
-                      size: 80,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No groups yet',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Create your first group to start tracking expenses',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              );
-            }
-            return RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(groupsProvider);
-              },
+      body: asyncGroups.when(
+        data: (groups) {
+          if (groups.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.groups_outlined,
+                    size: 80,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No groups yet',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Create your first group to start tracking expenses',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            );
+          }
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(groupsProvider);
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(16),
               child: ListView.separated(
                 itemCount: groups.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -86,40 +87,49 @@ class GroupsPage extends ConsumerWidget {
                   return _buildGroupCard(context, ref, g);
                 },
               ),
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Error loading groups',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  e.toString(),
-                  style: Theme.of(context).textTheme.bodySmall,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    ref.invalidate(groupsProvider);
-                  },
-                  child: const Text('Retry'),
-                ),
-              ],
             ),
-          ),
+          );
+        },
+        loading: () => const Center(
+          child: CircularProgressIndicator(),
         ),
+        error: (e, stackTrace) {
+          debugPrint('❌ GroupsPage error: $e');
+          debugPrint('Stack trace: $stackTrace');
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading groups',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    e.toString(),
+                    style: Theme.of(context).textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      ref.invalidate(groupsProvider);
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

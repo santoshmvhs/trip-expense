@@ -22,9 +22,11 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: IndexedStack(
-        index: index,
-        children: pages,
+      body: SafeArea(
+        child: IndexedStack(
+          index: index,
+          children: pages,
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
