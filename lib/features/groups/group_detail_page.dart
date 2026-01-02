@@ -345,8 +345,8 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
           ),
           child: SafeArea(
             child: Container(
-              height: 70,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              height: 75,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -385,7 +385,9 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
                 selectedColor: selectedColor,
                 unselectedColor: unselectedColor,
               ),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -408,32 +410,37 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
         },
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
                 color: isSelected ? selectedColor : unselectedColor,
-                size: 24,
+                size: 22,
               ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? selectedColor : unselectedColor,
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              const SizedBox(height: 2),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected ? selectedColor : unselectedColor,
+                    fontSize: 10,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (isSelected)
                 Container(
-                  margin: const EdgeInsets.only(top: 4),
-                  height: 3,
-                  width: 24,
+                  margin: const EdgeInsets.only(top: 2),
+                  height: 2,
+                  width: 20,
                   decoration: BoxDecoration(
                     color: selectedColor,
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(1),
                   ),
                 ),
             ],
