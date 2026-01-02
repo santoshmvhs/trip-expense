@@ -39,21 +39,42 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     }
     
     final supa = Supabase.instance.client;
+    
+    // Determine initial location based on auth state
+    final hasSession = supa.auth.currentSession != null;
+    final initialLocation = hasSession ? '/shell' : '/auth';
+    
+    debugPrint('🔐 Auth state: ${hasSession ? "Authenticated" : "Not authenticated"}');
+    debugPrint('📍 Initial location: $initialLocation');
 
     return GoRouter(
-      initialLocation: '/shell',
+      initialLocation: initialLocation,
       debugLogDiagnostics: true,
       refreshListenable: GoRouterRefreshStream(supa.auth.onAuthStateChange),
       redirect: (context, state) {
         try {
           final session = supa.auth.currentSession;
-          final loggingIn = state.matchedLocation == '/auth';
+          final currentPath = state.matchedLocation;
+          final isAuthPage = currentPath == '/auth';
 
-          if (session == null && !loggingIn) return '/auth';
-          if (session != null && loggingIn) return '/shell';
-          return null;
-        } catch (e) {
-          debugPrint('Router redirect error: $e');
+          debugPrint('🔄 Redirect check: path=$currentPath, hasSession=${session != null}');
+          
+          // If no session and not on auth page, redirect to auth
+          if (session == null && !isAuthPage) {
+            debugPrint('➡️ Redirecting to /auth (no session)');
+            return '/auth';
+          }
+          
+          // If has session and on auth page, redirect to shell
+          if (session != null && isAuthPage) {
+            debugPrint('➡️ Redirecting to /shell (has session)');
+            return '/shell';
+          }
+          
+          return null; // No redirect needed
+        } catch (e, stackTrace) {
+          debugPrint('❌ Router redirect error: $e');
+          debugPrint('Stack trace: $stackTrace');
           return '/auth'; // Fallback to auth on error
         }
       },
