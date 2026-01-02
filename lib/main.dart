@@ -78,6 +78,13 @@ class App extends ConsumerWidget {
         darkTheme: AppTheme.dark(),
         themeMode: themeMode,
         routerConfig: router,
+        builder: (context, child) {
+          // Ensure dark theme background is applied
+          return Theme(
+            data: Theme.of(context),
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
       );
     } catch (e, stackTrace) {
       debugPrint('ERROR in App build: $e');

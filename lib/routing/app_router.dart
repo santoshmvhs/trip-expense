@@ -18,25 +18,45 @@ import '../features/moments/moment_detail_page.dart';
 import '../features/moments/share_moment_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final supa = Supabase.instance.client;
+  try {
+    // Check if Supabase is initialized
+    if (!Supabase.instance.isInitialized) {
+      debugPrint('⚠️ Supabase not initialized, creating fallback router');
+      return GoRouter(
+        initialLocation: '/auth',
+        routes: [
+          GoRoute(
+            path: '/auth',
+            builder: (_, __) => Scaffold(
+              backgroundColor: const Color(0xFF1A1A1A),
+              body: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    
+    final supa = Supabase.instance.client;
 
-  return GoRouter(
-    initialLocation: '/shell',
-    debugLogDiagnostics: true,
-    refreshListenable: GoRouterRefreshStream(supa.auth.onAuthStateChange),
-    redirect: (context, state) {
-      try {
-        final session = supa.auth.currentSession;
-        final loggingIn = state.matchedLocation == '/auth';
+    return GoRouter(
+      initialLocation: '/shell',
+      debugLogDiagnostics: true,
+      refreshListenable: GoRouterRefreshStream(supa.auth.onAuthStateChange),
+      redirect: (context, state) {
+        try {
+          final session = supa.auth.currentSession;
+          final loggingIn = state.matchedLocation == '/auth';
 
-        if (session == null && !loggingIn) return '/auth';
-        if (session != null && loggingIn) return '/shell';
-        return null;
-      } catch (e) {
-        debugPrint('Router redirect error: $e');
-        return '/auth'; // Fallback to auth on error
-      }
-    },
+          if (session == null && !loggingIn) return '/auth';
+          if (session != null && loggingIn) return '/shell';
+          return null;
+        } catch (e) {
+          debugPrint('Router redirect error: $e');
+          return '/auth'; // Fallback to auth on error
+        }
+      },
     routes: [
       GoRoute(path: '/auth', builder: (_, __) => const AuthPage()),
       GoRoute(
@@ -123,6 +143,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  } catch (e) {
+    debugPrint('ERROR creating router: $e');
+    // Return a minimal router that shows error
+    return GoRouter(
+      initialLocation: '/auth',
+      routes: [
+        GoRoute(
+          path: '/auth',
+          builder: (_, __) => Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('Router Error: $e'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 });
 
 class GoRouterRefreshStream extends ChangeNotifier {
