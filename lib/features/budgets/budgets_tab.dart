@@ -7,6 +7,7 @@ import '../../core/providers/budget_providers.dart';
 import '../../core/providers/expense_providers.dart';
 import '../../core/providers/expense_with_splits_provider.dart';
 import '../../core/supabase/supabase_client.dart';
+import '../../widgets/modern_tab_bar.dart';
 import 'add_budget_dialog.dart';
 import 'auto_budget_dialog.dart';
 import 'budget_card.dart';
@@ -36,10 +37,16 @@ class BudgetsTab extends ConsumerWidget {
       length: 2,
       child: Column(
         children: [
-          TabBar(
+          ModernTabBar(
             tabs: const [
-              Tab(icon: Icon(Icons.group), text: 'Trip Budget'),
-              Tab(icon: Icon(Icons.person), text: 'My Budget'),
+              Tab(
+                icon: Icon(Icons.group_rounded, size: 16),
+                text: 'Trip Budget',
+              ),
+              Tab(
+                icon: Icon(Icons.person_rounded, size: 16),
+                text: 'My Budget',
+              ),
             ],
           ),
           Expanded(

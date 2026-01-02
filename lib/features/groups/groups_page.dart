@@ -9,6 +9,7 @@ import '../../core/models/group.dart';
 import '../../core/constants/currencies.dart';
 import '../../widgets/momentra_logo_appbar.dart';
 import '../../widgets/liquid_glass_card.dart';
+import '../../core/animations/staggered_list_animation.dart';
 
 final groupsRepoProvider = Provider((_) => GroupsRepo());
 final groupsProvider = FutureProvider((ref) => ref.watch(groupsRepoProvider).listMyGroups());
@@ -36,11 +37,24 @@ class GroupsPage extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'new_group_fab',
-        onPressed: () => _createGroup(context, ref),
-        icon: const Icon(Icons.add),
-        label: const Text('New group'),
+      floatingActionButton: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.elasticOut,
+        builder: (context, value, child) {
+          return Transform.scale(
+            scale: value,
+            child: Transform.rotate(
+              angle: (1 - value) * 0.5,
+              child: FloatingActionButton.extended(
+                heroTag: 'new_group_fab',
+                onPressed: () => _createGroup(context, ref),
+                icon: const Icon(Icons.add),
+                label: const Text('New group'),
+              ),
+            ),
+          );
+        },
       ),
       body: asyncGroups.when(
         data: (groups) {
@@ -84,7 +98,10 @@ class GroupsPage extends ConsumerWidget {
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (_, i) {
                   final g = groups[i];
-                  return _buildGroupCard(context, ref, g);
+                  return StaggeredListAnimation(
+                    index: i,
+                    child: _buildGroupCard(context, ref, g),
+                  );
                 },
               ),
             ),

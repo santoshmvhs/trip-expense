@@ -38,7 +38,7 @@ class ModernBottomNavBar extends StatelessWidget {
       child: SafeArea(
         child: Container(
           height: 72,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -94,7 +94,7 @@ class ModernBottomNavBar extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOutCubic,
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
             decoration: BoxDecoration(
               gradient: isSelected
                   ? LinearGradient(
@@ -106,7 +106,7 @@ class ModernBottomNavBar extends StatelessWidget {
                       end: Alignment.bottomCenter,
                     )
                   : null,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               border: isSelected
                   ? Border.all(
                       color: selectedColor.withValues(alpha: 0.3),
@@ -118,63 +118,78 @@ class ModernBottomNavBar extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOutCubic,
-                  padding: EdgeInsets.all(isSelected ? 10 : 8),
-                  decoration: BoxDecoration(
-                    gradient: isSelected
-                        ? LinearGradient(
-                            colors: [
-                              selectedColor.withValues(alpha: 0.25),
-                              selectedColor.withValues(alpha: 0.15),
-                            ],
-                          )
-                        : null,
-                    color: !isSelected ? Colors.transparent : null,
-                    shape: BoxShape.circle,
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: selectedColor.withValues(alpha: 0.3),
-                              blurRadius: 8,
-                              spreadRadius: 0,
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Icon(
-                    icon,
-                    color: isSelected ? selectedColor : unselectedColor,
-                    size: isSelected ? 28 : 24,
+                Flexible(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOutCubic,
+                    padding: EdgeInsets.all(isSelected ? 8 : 6),
+                    decoration: BoxDecoration(
+                      gradient: isSelected
+                          ? LinearGradient(
+                              colors: [
+                                selectedColor.withValues(alpha: 0.25),
+                                selectedColor.withValues(alpha: 0.15),
+                              ],
+                            )
+                          : null,
+                      color: !isSelected ? Colors.transparent : null,
+                      shape: BoxShape.circle,
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: selectedColor.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                                spreadRadius: 1,
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Icon(
+                      icon,
+                      color: isSelected ? selectedColor : unselectedColor,
+                      size: isSelected ? 24 : 22,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 6),
-                AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOutCubic,
-                  style: TextStyle(
-                    color: isSelected ? selectedColor : unselectedColor,
-                    fontSize: isSelected ? 13 : 11,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    letterSpacing: isSelected ? 0.8 : 0.3,
-                  ),
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                Flexible(
+                  child: AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOutCubic,
+                    style: TextStyle(
+                      color: isSelected ? selectedColor : unselectedColor,
+                      fontSize: isSelected ? 12 : 11,
+                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      letterSpacing: isSelected ? 0.5 : 0.3,
+                    ),
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
                 if (isSelected)
                   Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    height: 3,
-                    width: 32,
+                    margin: const EdgeInsets.only(top: 5),
+                    height: 2.5,
+                    width: 28,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [selectedColor, selectedColor.withValues(alpha: 0.7)],
+                        colors: [
+                          selectedColor,
+                          selectedColor.withValues(alpha: 0.8),
+                          selectedColor.withValues(alpha: 0.6),
+                        ],
                       ),
                       borderRadius: BorderRadius.circular(2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: selectedColor.withValues(alpha: 0.5),
+                          blurRadius: 4,
+                          spreadRadius: 0,
+                        ),
+                      ],
                     ),
                   ),
               ],

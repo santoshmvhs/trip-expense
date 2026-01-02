@@ -12,6 +12,8 @@ import '../../core/models/expense.dart';
 import '../../core/models/expense_split.dart';
 import '../../core/utils/category_icons.dart';
 import '../../widgets/momentra_logo_appbar.dart';
+import '../../widgets/liquid_glass_card.dart';
+import '../../theme/app_theme.dart';
 import 'add_expense_page.dart';
 
 final expenseDetailProvider = FutureProvider.family((ref, String expenseId) {
@@ -133,92 +135,99 @@ class ExpenseDetailPage extends ConsumerWidget {
           return asyncSplits.when(
             data: (splits) => asyncMembers.when(
               data: (members) => SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title and Amount
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          gradient: LinearGradient(
-                            colors: [
-                              Theme.of(context).colorScheme.primaryContainer,
-                              Theme.of(context).colorScheme.secondaryContainer,
+                    // Modern Header Card
+                    LiquidGlassCard(
+                      padding: const EdgeInsets.all(24),
+                      borderRadius: 24,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              // Category Icon with gradient background
+                              if (expense.category != null)
+                                Container(
+                                  width: 72,
+                                  height: 72,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        MomentraColors.warmOrange.withValues(alpha: 0.3),
+                                        MomentraColors.warmOrange.withValues(alpha: 0.1),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: MomentraColors.warmOrange.withValues(alpha: 0.3),
+                                        blurRadius: 12,
+                                        spreadRadius: 0,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    CategoryIcons.getIconForCategory(expense.category!),
+                                    color: MomentraColors.warmOrange,
+                                    size: 36,
+                                  ),
+                                ),
+                              const SizedBox(width: 20),
+                              // Title and Amount
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      expense.title,
+                                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 24,
+                                            letterSpacing: -0.5,
+                                            height: 1.2,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      _formatCurrency(expense.amount, expense.currency),
+                                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                                            color: MomentraColors.warmOrange,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 32,
+                                            letterSpacing: -1,
+                                            height: 1.1,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
                           ),
-                        ),
-                        padding: const EdgeInsets.all(24),
-                        child: Row(
-                          children: [
-                            // Category Icon
-                            if (expense.category != null)
-                              Container(
-                                width: 64,
-                                height: 64,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Icon(
-                                  CategoryIcons.getIconForCategory(expense.category!),
-                                  color: Colors.white,
-                                  size: 32,
-                                ),
-                              ),
-                            const SizedBox(width: 16),
-                            // Title and Amount
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    expense.title,
-                                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    _formatCurrency(expense.amount, expense.currency),
-                                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                    // Details
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                    // Modern Details Section
+                    LiquidGlassCard(
+                      padding: EdgeInsets.zero,
+                      borderRadius: 20,
                       child: Column(
                         children: [
-                          _buildDetailRow(
+                          _buildModernDetailRow(
                             context,
                             'Date',
                             DateFormat('MMM d, y').format(expense.expenseDate),
-                            icon: Icons.calendar_today,
+                            icon: Icons.calendar_today_rounded,
+                            isFirst: true,
                           ),
                           if (expense.category != null)
-                            _buildDetailRow(
+                            _buildModernDetailRow(
                               context,
                               'Category',
                               expense.category!,
@@ -226,7 +235,7 @@ class ExpenseDetailPage extends ConsumerWidget {
                               iconColor: CategoryIcons.getColorForCategory(expense.category!),
                             ),
                           if (expense.subcategory != null)
-                            _buildDetailRow(
+                            _buildModernDetailRow(
                               context,
                               'Subcategory',
                               expense.subcategory!,
@@ -246,188 +255,251 @@ class ExpenseDetailPage extends ConsumerWidget {
                               } catch (e) {
                                 paidByName = expense.paidBy.substring(0, 8) + '...';
                               }
-                              return _buildDetailRow(
+                              return _buildModernDetailRow(
                                 context,
                                 'Paid by',
                                 paidByName,
-                                icon: Icons.person,
+                                icon: Icons.person_rounded,
                               );
                             },
                           ),
                           if (expense.notes != null && expense.notes!.isNotEmpty)
-                            _buildDetailRow(
+                            _buildModernDetailRow(
                               context,
                               'Notes',
                               expense.notes!,
-                              icon: Icons.note_outlined,
+                              icon: Icons.note_rounded,
+                              isLast: true,
                             ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                    // Splits
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.account_balance_wallet,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Split Details',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            if (splits.isEmpty)
-                              Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(24),
-                                  child: Column(
-                                    children: [
-                                      Icon(
-                                        Icons.people_outline,
-                                        size: 48,
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'No splits found',
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                            ),
-                                      ),
+                    // Modern Splits Section
+                    LiquidGlassCard(
+                      padding: const EdgeInsets.all(20),
+                      borderRadius: 20,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      MomentraColors.warmOrange.withValues(alpha: 0.2),
+                                      MomentraColors.warmOrange.withValues(alpha: 0.1),
                                     ],
                                   ),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                              )
-                            else
-                              ...splits.map((split) {
-                                String userName = 'Unknown';
-                                try {
-                                  final member = members.firstWhere(
-                                    (m) => m['user_id'] == split.userId,
-                                  );
-                                  userName = member['name'] as String;
-                                } catch (e) {
-                                  userName = split.userId.substring(0, 8) + '...';
-                                }
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-                                    borderRadius: BorderRadius.circular(12),
+                                child: Icon(
+                                  Icons.account_balance_wallet_rounded,
+                                  color: MomentraColors.warmOrange,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Split Details',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 20,
+                                      letterSpacing: -0.3,
+                                    ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          if (splits.isEmpty)
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 32),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.people_outline_rounded,
+                                      size: 56,
+                                      color: MomentraColors.lightGray.withValues(alpha: 0.5),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'No splits found',
+                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                            color: MomentraColors.lightGray.withValues(alpha: 0.7),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          else
+                            ...splits.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final split = entry.value;
+                              String userName = 'Unknown';
+                              try {
+                                final member = members.firstWhere(
+                                  (m) => m['user_id'] == split.userId,
+                                );
+                                userName = member['name'] as String;
+                              } catch (e) {
+                                userName = split.userId.substring(0, 8) + '...';
+                              }
+                              return Container(
+                                margin: EdgeInsets.only(bottom: index < splits.length - 1 ? 12 : 0),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      MomentraColors.warmOrange.withValues(alpha: 0.08),
+                                      MomentraColors.warmOrange.withValues(alpha: 0.03),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                   ),
-                                  child: Row(
-                                    children: [
-                                      CircleAvatar(
-                                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                        radius: 20,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: MomentraColors.warmOrange.withValues(alpha: 0.15),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            MomentraColors.warmOrange,
+                                            MomentraColors.warmOrange.withValues(alpha: 0.8),
+                                          ],
+                                        ),
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: MomentraColors.warmOrange.withValues(alpha: 0.3),
+                                            blurRadius: 8,
+                                            spreadRadius: 0,
+                                          ),
+                                        ],
+                                      ),
+                                      child: Center(
                                         child: Text(
                                           userName[0].toUpperCase(),
-                                          style: TextStyle(
-                                            color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                            fontWeight: FontWeight.bold,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 18,
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          userName,
-                                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                        ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            userName,
+                                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 16,
+                                                  letterSpacing: -0.2,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Share',
+                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                  color: MomentraColors.lightGray.withValues(alpha: 0.6),
+                                                  fontSize: 12,
+                                                ),
+                                          ),
+                                        ],
                                       ),
-                                      Text(
-                                        _formatCurrency(split.share, expense.currency),
-                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: Theme.of(context).colorScheme.primary,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }),
-                          ],
-                        ),
+                                    ),
+                                    Text(
+                                      _formatCurrency(split.share, expense.currency),
+                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                            fontWeight: FontWeight.w900,
+                                            color: MomentraColors.warmOrange,
+                                            fontSize: 18,
+                                            letterSpacing: -0.5,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                    // Receipt
+                    // Modern Receipt Section
                     if (expense.receiptPath != null)
-                      Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: InkWell(
-                          onTap: () {
-                            // TODO: Open receipt image viewer
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.receipt_long,
-                                    color: Colors.green,
-                                  ),
+                      LiquidGlassCard(
+                        padding: const EdgeInsets.all(20),
+                        borderRadius: 20,
+                        onTap: () {
+                          // TODO: Open receipt image viewer
+                        },
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.green.withValues(alpha: 0.2),
+                                    Colors.green.withValues(alpha: 0.1),
+                                  ],
                                 ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Receipt',
-                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Tap to view',
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Icon(
-                                  Icons.chevron_right,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
-                              ],
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Icon(
+                                Icons.receipt_long_rounded,
+                                color: Colors.green,
+                                size: 28,
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Receipt',
+                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 18,
+                                          letterSpacing: -0.3,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Tap to view',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: MomentraColors.lightGray.withValues(alpha: 0.6),
+                                          fontSize: 13,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              color: MomentraColors.lightGray.withValues(alpha: 0.5),
+                              size: 24,
+                            ),
+                          ],
                         ),
                       ),
                   ],
@@ -457,50 +529,79 @@ class ExpenseDetailPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetailRow(
+  Widget _buildModernDetailRow(
     BuildContext context,
     String label,
     String value, {
     IconData? icon,
     Color? iconColor,
+    bool isFirst = false,
+    bool isLast = false,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: isLast
+              ? BorderSide.none
+              : BorderSide(
+                  color: MomentraColors.divider.withValues(alpha: 0.1),
+                  width: 1,
+                ),
+        ),
+      ),
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: isFirst ? 20 : 16,
+        bottom: isLast ? 20 : 16,
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (icon != null) ...[
             Container(
-              width: 32,
-              height: 32,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: (iconColor ?? Theme.of(context).colorScheme.primary).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                gradient: LinearGradient(
+                  colors: [
+                    (iconColor ?? MomentraColors.warmOrange).withValues(alpha: 0.2),
+                    (iconColor ?? MomentraColors.warmOrange).withValues(alpha: 0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 icon,
-                size: 18,
-                color: iconColor ?? Theme.of(context).colorScheme.primary,
+                size: 20,
+                color: iconColor ?? MomentraColors.warmOrange,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
           ],
-          SizedBox(
-            width: icon != null ? 80 : 100,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w500,
-                  ),
-            ),
-          ),
           Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: MomentraColors.lightGray.withValues(alpha: 0.7),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        letterSpacing: -0.2,
+                        height: 1.3,
+                      ),
+                ),
+              ],
             ),
           ),
         ],

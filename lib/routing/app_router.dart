@@ -16,6 +16,7 @@ import '../features/settle/settle_page.dart';
 import '../screens/notifications/notifications_screen.dart';
 import '../features/moments/moment_detail_page.dart';
 import '../features/moments/share_moment_screen.dart';
+import '../core/animations/premium_transitions.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   try {
@@ -79,86 +80,107 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         }
       },
     routes: [
-      GoRoute(path: '/auth', builder: (_, __) => const AuthPage()),
+      GoRoute(
+        path: '/auth',
+        pageBuilder: (context, state) => PremiumTransitions.fadeScaleTransition(
+          child: const AuthPage(),
+          state: state,
+        ),
+      ),
       GoRoute(
         path: '/shell',
-        builder: (_, __) => const AppShell(),
+        pageBuilder: (context, state) => PremiumTransitions.fadeScaleTransition(
+          child: const AppShell(),
+          state: state,
+        ),
         routes: [
           GoRoute(
             path: 'group/:id',
-            builder: (ctx, st) {
-              final groupId = st.pathParameters['id']!;
-              return GroupDetailPage(groupId: groupId);
-            },
+            pageBuilder: (context, state) => PremiumTransitions.slideFromRight(
+              child: GroupDetailPage(groupId: state.pathParameters['id']!),
+              state: state,
+            ),
           ),
           GoRoute(
             path: 'group/:id/add-expense',
-            builder: (ctx, st) {
-              final groupId = st.pathParameters['id']!;
-              return AddExpensePage(groupId: groupId);
-            },
+            pageBuilder: (context, state) => PremiumTransitions.slideFromBottom(
+              child: AddExpensePage(groupId: state.pathParameters['id']!),
+              state: state,
+            ),
           ),
           GoRoute(
             path: 'group/:id/expense/:expenseId',
-            builder: (ctx, st) {
-              final expenseId = st.pathParameters['expenseId']!;
-              return ExpenseDetailPage(expenseId: expenseId);
-            },
+            pageBuilder: (context, state) => PremiumTransitions.heroTransition(
+              child: ExpenseDetailPage(expenseId: state.pathParameters['expenseId']!),
+              state: state,
+            ),
           ),
           GoRoute(
             path: 'group/:id/expense/:expenseId/edit',
-            builder: (ctx, st) {
-              final groupId = st.pathParameters['id']!;
-              final expenseId = st.pathParameters['expenseId']!;
-              return AddExpensePage(groupId: groupId, expenseId: expenseId);
-            },
+            pageBuilder: (context, state) => PremiumTransitions.slideFromBottom(
+              child: AddExpensePage(
+                groupId: state.pathParameters['id']!,
+                expenseId: state.pathParameters['expenseId']!,
+              ),
+              state: state,
+            ),
           ),
           GoRoute(
             path: 'group/:id/timeline',
-            builder: (ctx, st) {
-              final groupId = st.pathParameters['id']!;
-              return GroupTimelinePage(groupId: groupId);
-            },
+            pageBuilder: (context, state) => PremiumTransitions.slideFromRight(
+              child: GroupTimelinePage(groupId: state.pathParameters['id']!),
+              state: state,
+            ),
           ),
           GoRoute(
             path: 'group/:id/qr-invite',
-            builder: (ctx, st) {
-              final groupId = st.pathParameters['id']!;
-              return QrInviteScreen(groupId: groupId);
-            },
+            pageBuilder: (context, state) => PremiumTransitions.slideFromBottom(
+              child: QrInviteScreen(groupId: state.pathParameters['id']!),
+              state: state,
+            ),
           ),
           GoRoute(
             path: 'group/:id/settle',
-            builder: (ctx, st) {
-              final groupId = st.pathParameters['id']!;
-              return SettlePage(groupId: groupId);
-            },
+            pageBuilder: (context, state) => PremiumTransitions.slideFromRight(
+              child: SettlePage(groupId: state.pathParameters['id']!),
+              state: state,
+            ),
           ),
           GoRoute(
             path: 'group/:groupId/moment/:momentId',
-            builder: (ctx, st) {
-              final groupId = st.pathParameters['groupId']!;
-              final momentId = st.pathParameters['momentId']!;
-              return MomentDetailPage(momentId: momentId, groupId: groupId);
-            },
+            pageBuilder: (context, state) => PremiumTransitions.heroTransition(
+              child: MomentDetailPage(
+                momentId: state.pathParameters['momentId']!,
+                groupId: state.pathParameters['groupId']!,
+              ),
+              state: state,
+            ),
             routes: [
               GoRoute(
                 path: 'share',
-                builder: (ctx, st) {
-                  final groupId = st.pathParameters['groupId']!;
-                  final momentId = st.pathParameters['momentId']!;
-                  return ShareMomentScreen(momentId: momentId, groupId: groupId);
-                },
+                pageBuilder: (context, state) => PremiumTransitions.slideFromBottom(
+                  child: ShareMomentScreen(
+                    momentId: state.pathParameters['momentId']!,
+                    groupId: state.pathParameters['groupId']!,
+                  ),
+                  state: state,
+                ),
               ),
             ],
           ),
           GoRoute(
             path: 'scan-qr',
-            builder: (_, __) => const ScanQrScreen(),
+            pageBuilder: (context, state) => PremiumTransitions.slideFromBottom(
+              child: const ScanQrScreen(),
+              state: state,
+            ),
           ),
           GoRoute(
             path: 'notifications',
-            builder: (_, __) => const NotificationsScreen(),
+            pageBuilder: (context, state) => PremiumTransitions.slideFromRight(
+              child: const NotificationsScreen(),
+              state: state,
+            ),
           ),
         ],
       ),

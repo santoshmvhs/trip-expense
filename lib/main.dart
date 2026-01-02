@@ -81,7 +81,15 @@ class App extends ConsumerWidget {
         builder: (context, child) {
           // Ensure dark theme background is applied
           return Theme(
-            data: Theme.of(context),
+            data: Theme.of(context).copyWith(
+              pageTransitionsTheme: const PageTransitionsTheme(
+                builders: {
+                  TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+                  TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+                  TargetPlatform.macOS: FadeUpwardsPageTransitionsBuilder(),
+                },
+              ),
+            ),
             child: child ?? const SizedBox.shrink(),
           );
         },

@@ -29,6 +29,7 @@ import '../../core/supabase/supabase_client.dart' show currentUser;
 import '../../widgets/momentra_logo_appbar.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/liquid_glass_card.dart';
+import '../../core/animations/staggered_list_animation.dart';
 
 final groupsRepoProvider = Provider((_) => GroupsRepo());
 
@@ -321,51 +322,49 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
   Widget _buildBottomTabBar() {
     final theme = Theme.of(context);
     final selectedColor = MomentraColors.warmOrange;
-    final unselectedColor = MomentraColors.lightGray;
+    final unselectedColor = MomentraColors.lightGray.withValues(alpha: 0.5);
     
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface.withValues(alpha: 0.85),
-            border: Border(
-              top: BorderSide(
-                color: MomentraColors.divider.withValues(alpha: 0.3),
-                width: 0.5,
-              ),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 20,
-                offset: const Offset(0, -4),
-              ),
-            ],
+    Widget navBar = Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withValues(alpha: 0.98),
+        border: Border(
+          top: BorderSide(
+            color: MomentraColors.divider.withValues(alpha: 0.15),
+            width: 0.5,
           ),
-          child: SafeArea(
-            child: Container(
-              height: 75,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 24,
+            offset: const Offset(0, -6),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Container(
+          height: 72,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
               _buildTabItem(
-                icon: Icons.receipt_long,
+                icon: Icons.receipt_long_rounded,
                 label: 'Expenses',
                 index: 0,
                 selectedColor: selectedColor,
                 unselectedColor: unselectedColor,
               ),
               _buildTabItem(
-                icon: Icons.analytics_outlined,
+                icon: Icons.analytics_rounded,
                 label: 'Analysis',
                 index: 1,
                 selectedColor: selectedColor,
                 unselectedColor: unselectedColor,
               ),
               _buildTabItem(
-                icon: Icons.account_balance_wallet,
+                icon: Icons.account_balance_wallet_rounded,
                 label: 'Budgets',
                 index: 2,
                 selectedColor: selectedColor,
@@ -379,17 +378,23 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
                 unselectedColor: unselectedColor,
               ),
               _buildTabItem(
-                icon: Icons.timeline,
+                icon: Icons.timeline_rounded,
                 label: 'Timeline',
                 index: 4,
                 selectedColor: selectedColor,
                 unselectedColor: unselectedColor,
               ),
-                ],
-              ),
-            ),
+            ],
           ),
         ),
+      ),
+    );
+
+    // Add glass effect on mobile (not web for performance)
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: navBar,
       ),
     );
   }
@@ -404,46 +409,129 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
     final isSelected = _tabController.index == index;
     
     return Expanded(
-      child: InkWell(
-        onTap: () {
-          _tabController.animateTo(index);
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: isSelected ? selectedColor : unselectedColor,
-                size: 22,
-              ),
-              const SizedBox(height: 2),
-              Flexible(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: isSelected ? selectedColor : unselectedColor,
-                    fontSize: 10,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            _tabController.animateTo(index);
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            decoration: BoxDecoration(
+              gradient: isSelected
+                  ? LinearGradient(
+                      colors: [
+                        selectedColor.withValues(alpha: 0.25),
+                        selectedColor.withValues(alpha: 0.15),
+                        selectedColor.withValues(alpha: 0.08),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    )
+                  : null,
+              borderRadius: BorderRadius.circular(18),
+              border: isSelected
+                  ? Border.all(
+                      color: selectedColor.withValues(alpha: 0.4),
+                      width: 1.5,
+                    )
+                  : null,
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: selectedColor.withValues(alpha: 0.25),
+                        blurRadius: 12,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOutCubic,
+                    padding: EdgeInsets.all(isSelected ? 7 : 5),
+                    decoration: BoxDecoration(
+                      gradient: isSelected
+                          ? LinearGradient(
+                              colors: [
+                                selectedColor.withValues(alpha: 0.3),
+                                selectedColor.withValues(alpha: 0.2),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                      color: !isSelected ? Colors.transparent : null,
+                      shape: BoxShape.circle,
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: selectedColor.withValues(alpha: 0.4),
+                                blurRadius: 8,
+                                spreadRadius: 1.5,
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Icon(
+                      icon,
+                      color: isSelected ? selectedColor : unselectedColor,
+                      size: isSelected ? 22 : 19,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              if (isSelected)
-                Container(
-                  margin: const EdgeInsets.only(top: 2),
-                  height: 2,
-                  width: 20,
-                  decoration: BoxDecoration(
-                    color: selectedColor,
-                    borderRadius: BorderRadius.circular(1),
+                const SizedBox(height: 6),
+                Flexible(
+                  child: AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOutCubic,
+                    style: TextStyle(
+                      color: isSelected ? selectedColor : unselectedColor,
+                      fontSize: isSelected ? 11 : 10,
+                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      letterSpacing: isSelected ? 0.5 : 0.3,
+                    ),
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
-            ],
+                if (isSelected)
+                  Container(
+                    margin: const EdgeInsets.only(top: 5),
+                    height: 2.5,
+                    width: 26,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          selectedColor,
+                          selectedColor.withValues(alpha: 0.8),
+                          selectedColor.withValues(alpha: 0.6),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: selectedColor.withValues(alpha: 0.5),
+                          blurRadius: 4,
+                          spreadRadius: 0,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -531,7 +619,10 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> with SingleTi
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
                       itemBuilder: (_, i) {
                         final e = items[i];
-                        return _buildExpenseCard(context, ref, e, widget.groupId);
+                        return StaggeredListAnimation(
+                          index: i,
+                          child: _buildExpenseCard(context, ref, e, widget.groupId),
+                        );
                       },
                     ),
             );
