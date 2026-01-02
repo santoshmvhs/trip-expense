@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// Liquid Glass Card Widget
 /// Provides iOS-style frosted glass effect with blur and transparency
@@ -41,8 +41,10 @@ class LiquidGlassCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
-    // Use glass effect on iOS, or if explicitly enabled
-    final shouldUseGlass = Platform.isIOS || enableGlassEffect;
+    // Use glass effect if enabled
+    // Note: BackdropFilter works on web but may have performance implications
+    // Disable blur on web for better performance, keep styling
+    final shouldUseGlass = enableGlassEffect && !kIsWeb;
     
     final defaultBackground = backgroundColor ??
         (isDark
