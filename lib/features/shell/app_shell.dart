@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../groups/groups_page.dart';
 import '../settings/settings_page.dart';
+import '../../widgets/modern_bottom_nav_bar.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -28,13 +29,9 @@ class _AppShellState extends State<AppShell> {
           children: pages,
         ),
       ),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: ModernBottomNavBar(
         selectedIndex: index,
-        onDestinationSelected: (i) => setState(() => index = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.groups_outlined), label: 'Groups'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
-        ],
+        onTap: (i) => setState(() => index = i),
       ),
     );
   }
