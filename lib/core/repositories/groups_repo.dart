@@ -6,12 +6,36 @@ import '../models/group.dart';
 
 class GroupsRepo {
   Future<List<Group>> listMyGroups() async {
-    final res = await supabase()
-        .from('groups')
-        .select('id,name,currency,created_by')
-        .order('created_at', ascending: false);
+    final userId = currentUser()?.id;
+    if (userId == null) {
+      debugPrint('⚠️ No user ID, returning empty groups list');
+      return [];
+    }
 
-    return (res as List).map((e) => Group.fromJson(e as Map<String, dynamic>)).toList();
+    try {
+      // Get groups where user is a member
+      final res = await supabase()
+          .from('group_members')
+          .select('group_id, groups(id, name, currency, created_by)')
+          .eq('user_id', userId);
+
+      debugPrint('📦 Found ${(res as List).length} group memberships');
+      
+      final groups = <Group>[];
+      for (final item in (res as List)) {
+        final groupData = item['groups'];
+        if (groupData != null) {
+          groups.add(Group.fromJson(groupData as Map<String, dynamic>));
+        }
+      }
+
+      debugPrint('✅ Loaded ${groups.length} groups');
+      return groups;
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error loading groups: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   Future<Group> getGroup(String groupId) async {

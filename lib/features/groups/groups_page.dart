@@ -35,12 +35,12 @@ class GroupsPage extends ConsumerWidget {
           ),
         ],
       ),
-          floatingActionButton: FloatingActionButton.extended(
-            heroTag: 'new_group_fab', // Unique hero tag
-            onPressed: () => _createGroup(context, ref),
-            icon: const Icon(Icons.add),
-            label: const Text('New group'),
-          ),
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'new_group_fab',
+        onPressed: () => _createGroup(context, ref),
+        icon: const Icon(Icons.add),
+        label: const Text('New group'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: asyncGroups.when(
